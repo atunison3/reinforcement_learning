@@ -10,4 +10,4 @@ output: r <- 1 with probability p(a), else 0
 def environment(a: int, p: float) -> int:
     """Determines the reward"""
 
-    pass
+    return 1

@@ -6,7 +6,7 @@
 - The agent is rewarded with reward $r\in\mathcal{R}$.
 - After rewarding, environment moves to a new state $s\in\mathcal{S}$.
 - All of these variables are **stochastic** meaning, given the same input state and action $s$ and $a$, the resulting state and action may be different.
-- **Reward Engineering** - Solves the problem of what reard signal should be given for a given state-action response. 
+- **Reward Engineering** - Solves the problem of what reard signal should be given for a given state-action response.
 - Use the average reward $r^{avg}$ for a certain number of events (for the stochastic natural of things).
 
 $$
@@ -24,7 +24,7 @@ r^{avg}_N&\gets r_{N-1}^{avg}+\frac{1}{N}\left(r_N-r_{N-1}^{avg}\right)\tag{2-2}
 \end{align*}
 $$
 
-- This is very similar to the general form of an exponentially weighted moving average. 
+- This is very similar to the general form of an exponentially weighted moving average.
 
 $$r=r+\alpha\left(r'-r\right)\tag{2-3}$$
 

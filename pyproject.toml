@@ -1,0 +1,26 @@
+[project]
+name = "Reinforcement-Learning"
+description = "Notes and random experiments/playgrounds while reading Phil Winder's Reinforcement Learning"
+version = "0.1.0"
+requires-python = ">= 3.13"
+authors = [
+  {name = "Andy Tunison", email = "andrew.e.tunison@gmail.com"},
+]
+readme = "README.md"
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length=120
+
+[tool.mypy]
+#no_namespace_packages = true
+#explicit_package_bases = true
+
+[tool.setuptools]
+packages = ["reinforcement_learning"]
