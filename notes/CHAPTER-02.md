@@ -28,6 +28,11 @@ $$
 
 $$r=r+\alpha\left(r'-r\right)\tag{2-3}$$
 
+- Transition of a model
+
+$$
+p(s',r|s,a)\tag{2-4}
+$$
 
 - Bandit algorithms are "dynamic" A/B tests in that they begin with equal probability, but shift the behavior as the results stream in. Think of a button click (which color generates more sales?). In A/B testing, the company is losing 50% of the different in profit by using the "worse" color 50% of the time. If instead, the bandit uses 50% initially, then slowly begins changing it to the optimal color, the company won't lose as much.
 
