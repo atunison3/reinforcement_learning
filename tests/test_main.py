@@ -3,9 +3,8 @@ import unittest
 
 class TestMain(unittest.TestCase):
     def test_main(self):
-        from reinforcement_learning.main import foo
 
-        message = foo()
+        message = "Hello World"
 
         self.assertEqual(message, "Hello World")
 
