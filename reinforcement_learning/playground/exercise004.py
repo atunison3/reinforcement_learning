@@ -83,7 +83,7 @@ class Agent:
 
 def run_experiments(
     alphas: list[float | None], initial_values: list[float], trials: int = 2000, steps: int = 10000, k_arms: int = 10
-) -> Any:  # dict[Any | None, tuple[np.ndarray, np.ndarray]]:
+) -> Any:
     """Run repeated k-armed bandit experiments for multiple alpha values."""
 
     results = {}
