@@ -1,22 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Document</title>
-  <meta name="description" content="Description">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@5/dist/themes/core.min.css">
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@5/dist/themes/addons/vue.min.css">
+  <meta charset="UTF-8">
+  <title>reinforcement_learning</title>
+  <meta name="description" content="Notes and exercises while reading Reinforcement Learning by Phil Winder">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
 </head>
 <body>
   <div id="app"></div>
+
   <script>
     window.$docsify = {
-      name: '',
-      repo: ''
-    }
+      name: "reinforcement_learning",
+      repo: "https://github.com/atunison3/reinforcement_learning",
+      loadSidebar: true,
+      coverpage: true,
+      auto2top: true,
+      subMaxLevel: 3,
+      homepage: "README.md",
+      search: {
+        placeholder: "Search",
+        noData: "No results",
+      },
+    };
   </script>
-  <!-- Docsify resource -->
-  <script src="//cdn.jsdelivr.net/npm/docsify@5"></script>
+
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-python.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-powershell.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-toml.min.js"></script>
 </body>
 </html>
