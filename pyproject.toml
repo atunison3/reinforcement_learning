@@ -1,26 +1,41 @@
-[project]
-name = "Reinforcement-Learning"
-description = "Notes and random experiments/playgrounds while reading Phil Winder's Reinforcement Learning"
-version = "0.1.0"
-requires-python = ">= 3.13"
-authors = [
-  {name = "Andy Tunison", email = "andrew.e.tunison@gmail.com"},
-]
-readme = "README.md"
-
 [build-system]
-requires = ["setuptools >= 77.0.3"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "reinforcement_learning"
+version = "0.1.0"
+description = "Notes and exercises while reading Reinforcement Learning by Phil Winder"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.14"
+authors = [
+    { name = "Andrew Tunison" },
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "bandit",
+    "black",
+    "mypy",
+    "pre-commit",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["reinforcement_learning*"]
+
 [tool.black]
-line-length = 140
+line-length = 120
+target-version = ["py314"]
 
 [tool.ruff]
-line-length=140
+line-length = 120
+target-version = "py314"
 
 [tool.mypy]
-#no_namespace_packages = true
-#explicit_package_bases = true
-
-[tool.setuptools]
+python_version = "3.14"
+strict = true
 packages = ["reinforcement_learning"]
