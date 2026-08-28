@@ -19,3 +19,6 @@
   - [Contributor Guide](contributing/README.md)
   - [Development Setup](contributing/development-setup.md)
   - [Testing](contributing/testing.md)
+
+- About
+  - [About the Author](about/author.md)
