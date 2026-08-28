@@ -22,7 +22,6 @@ repos:
         entry: ruff check
         language: system
         types: [python]
-        args: [--fix]
         files: ^(reinforcement_learning|tests)/
 
       - id: bandit
