@@ -88,3 +88,28 @@ $$
 $$
 
 The preference difference is the log-odds, just as the linear predictor is the log-odds in logistic regression or a binary-output neural network. Equal preferences give probability $1/2$; an increasingly positive difference favors action 1. By shift invariance, one may set $H_2=0$ without loss of generality, obtaining the familiar form $\pi(1)=\sigma(H_1)$. If softmax includes a temperature $\tau>0$, the corresponding probability is $\sigma((H_1-H_2)/\tau)$; this implementation uses $\tau=1$.
+
+### What Changes with Three or More Actions?
+
+With three actions, dividing the softmax numerator and denominator by $e^{H_1}$ gives
+
+$$
+\pi(1)=\frac{e^{H_1}}{e^{H_1}+e^{H_2}+e^{H_3}}
+=\frac{1}{1+e^{H_2-H_1}+e^{H_3-H_1}}.
+$$
+
+The additional exponential term means this is **not the sigmoid of a single pairwise preference difference**. Action 1 competes with both alternatives, not just action 2. Softmax generalizes the binary logistic model to multiple actions.
+
+There is nevertheless a useful one-versus-rest interpretation: combine the other actions into a single alternative. Then
+
+$$
+\pi(1)=\sigma\!\left(H_1-\log(e^{H_2}+e^{H_3})\right).
+$$
+
+More generally, for $k\geq2$ actions,
+
+$$
+\pi(i)=\sigma\!\left(H_i-\log\sum_{j\ne i}e^{H_j}\right).
+$$
+
+Here the log-sum-exp term represents all competing actions together. Each individual probability can therefore be written as a sigmoid, but the full policy is a categorical softmax distribution, not a collection of independent binary choices. With exactly two actions, the competing term reduces to the other action's preference, recovering $\pi(1)=\sigma(H_1-H_2)$.
