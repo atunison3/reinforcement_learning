@@ -17,6 +17,7 @@
   - [Exercise 4](exercises/exercise4.md)
   - [Exercise 5](exercises/exercise5.md)
   - [Exercise 6](exercises/exercise6.md)
+  - [Exercise 7](exercises/exercise7.md)
 
 - Contributing
   - [Contributor Guide](contributing/README.md)
