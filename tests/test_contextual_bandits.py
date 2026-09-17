@@ -73,6 +73,25 @@ class TestContextualBanditAgent(unittest.TestCase):
         np.testing.assert_array_equal(choose.call_args.args[0], [90.0, 0.0])
         self.assertEqual(choose.call_args.args[1], 0.2)
 
+    def test_legal_actions_mask_exploitation_and_exploration(self) -> None:
+        for epsilon in (0.0, 1.0):
+            with self.subTest(epsilon=epsilon):
+                agent = ContextualBanditAgent(1, 3, epsilon)
+                agent.q[0] = [1.0, 2.0, 1000.0]
+                with patch("reinforcement_learning.contextual_bandits.epsilon_greedy", return_value=1) as choose:
+                    self.assertEqual(agent.choose_action(0, legal_actions=(1, 0)), 0)
+                np.testing.assert_array_equal(choose.call_args.args[0], [2.0, 1.0])
+                self.assertEqual(choose.call_args.args[1], epsilon)
+        greedy = ContextualBanditAgent(1, 3, epsilon=0.0)
+        greedy.q[0] = [1.0, 2.0, 1000.0]
+        self.assertEqual(greedy.choose_action(0, (0, 1)), 1)
+
+    def test_rejects_empty_duplicate_or_invalid_legal_actions(self) -> None:
+        agent = ContextualBanditAgent(1, 3)
+        for actions in ((), (0, 0), (-1,), (3,)):
+            with self.subTest(actions=actions), self.assertRaises(ValueError):
+                agent.choose_action(0, actions)
+
     def test_one_context_pools_rewards_as_an_ordinary_bandit(self) -> None:
         agent = ContextualBanditAgent(n_contexts=1, n_actions=2)
         agent.update(0, 0, 10.0)
