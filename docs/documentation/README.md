@@ -24,7 +24,7 @@ Public learning code currently lives under `reinforcement_learning.playground`.
 ## Related project areas
 
 | Path | Role |
-|------|------|
+| ------ | ------ |
 | `tests/` | `unittest` discovery root |
 | `docs/` | Docsify documentation site |
 | `notes/` | Chapter study notes (Markdown) |

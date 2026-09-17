@@ -76,7 +76,7 @@ pre-commit run --all-files
 Hooks include:
 
 | Hook | Role |
-|------|------|
+| ------ | ------ |
 | trailing-whitespace / end-of-file-fixer | Whitespace cleanup on `reinforcement_learning/` and `tests/` |
 | black | Format Python (`--line-length=120`) |
 | ruff | Lint Python under those trees |

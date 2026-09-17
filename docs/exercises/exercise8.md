@@ -62,7 +62,7 @@ The irregular boundaries and isolated choices should not be read as an exact str
 Selected estimates from the seeded run are below; parentheses give visit counts.
 
 | Initial state | Hit | Stand | Double |
-|---------------|-----|-------|--------|
+| --------------- | ----- | ------- | -------- |
 | Hard 11, dealer 6, can double | 0.227 (128) | −0.273 (121) | 0.681 (1,557) |
 | Hard 20, dealer 10, can double | −0.873 (979) | 0.446 (12,576) | −1.689 (1,002) |
 | Soft 21, dealer 6, can double | 0.160 (119) | 1.500 (1,593) | 0.553 (123) |

@@ -16,7 +16,7 @@ class Environment:
 ### `__init__`
 
 | Parameter | Default | Meaning |
-|-----------|---------|---------|
+| ----------- | --------- | --------- |
 | `k` | `10` | Number of arms |
 
 Initializes `rewards` to zeros and `optimal_action` to `0` until `reset()`.
@@ -49,7 +49,7 @@ class Agent:
 ### `__init__`
 
 | Parameter | Default | Meaning |
-|-----------|---------|---------|
+| ----------- | --------- | --------- |
 | `epsilon` | `0.0` | Exploration probability |
 | `k` | `10` | Number of arms |
 

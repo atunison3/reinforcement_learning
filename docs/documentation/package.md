@@ -3,7 +3,7 @@
 ## Project metadata
 
 | Field | Value |
-|-------|--------|
+| ------- | -------- |
 | Name | `reinforcement_learning` |
 | Version | `0.1.0` |
 | License | Apache-2.0 |
@@ -28,7 +28,7 @@ from reinforcement_learning.playground import exercise002
 ## Modules
 
 | Module | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `reinforcement_learning.playground.exercise001` | 2-action environment, random agent, sample-average Q updates |
 | `reinforcement_learning.playground.exercise002` | *k*-armed Gaussian bandit, ε-greedy agent, multi-trial runner, plotting |
 
