@@ -30,7 +30,7 @@ step(self, action: int) -> tuple[int, int, bool]
 Applies an action and returns `(next_state, reward, terminated)`.
 
 | Action | Result |
-|--------|--------|
+| -------- | -------- |
 | `0` | `(1, -1, True)` |
 | `1` | `(1, 1, True)` |
 | other | raises `ValueError` |

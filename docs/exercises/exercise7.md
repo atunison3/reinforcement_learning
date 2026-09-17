@@ -29,7 +29,7 @@ This remains a bandit problem because actions affect only immediate reward, not 
 The two cases occur independently with equal probability:
 
 | Context | Probability | $q_*(s,1)$ | $q_*(s,2)$ | Best action |
-|---------|-------------|------------|------------|-------------|
+| --------- | ------------- | ------------ | ------------ | ------------- |
 | A | $0.5$ | $10$ | $20$ | Action 2 |
 | B | $0.5$ | $90$ | $80$ | Action 1 |
 
@@ -107,7 +107,7 @@ The remaining gap is an exploration cost, not missing contextual information. Sh
 For the seeded run, performance over the final 200 steps was:
 
 | Learner | Average reward | Contextually optimal action |
-|---------|----------------|-----------------------------|
+| --------- | ---------------- | ----------------------------- |
 | Without context | 49.959 | 50.07% |
 | With context | 54.451 | 94.96% |
 

@@ -1,5 +1,7 @@
 """Tabular contextual-bandit learning and the value of observing context."""
 
+from collections.abc import Sequence
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -53,12 +55,25 @@ class ContextualBanditAgent:
         self.counts: NDArray[np.int64] = np.zeros((n_contexts, n_actions), dtype=np.int64)
         self.epsilon = epsilon
 
-    def choose_action(self, context: int) -> int:
-        """Select an action using only estimates for the observed context."""
+    def choose_action(self, context: int, legal_actions: Sequence[int] | None = None) -> int:
+        """Select epsilon-greedily among the context's legal actions only.
+
+        Both exploration and exploitation respect ``legal_actions``. Omitting
+        it retains the usual behavior in which every action is available.
+        """
 
         if not 0 <= context < self.q.shape[0]:
             raise ValueError(f"Invalid context: {context}")
-        return epsilon_greedy(self.q[context], self.epsilon)
+        if legal_actions is None:
+            return epsilon_greedy(self.q[context], self.epsilon)
+
+        actions = np.asarray(legal_actions, dtype=np.int64)
+        if actions.ndim != 1 or actions.size == 0:
+            raise ValueError("`legal_actions` must be a nonempty 1D sequence")
+        if np.any(actions < 0) or np.any(actions >= self.q.shape[1]) or len(np.unique(actions)) != len(actions):
+            raise ValueError("`legal_actions` must contain distinct valid action indices")
+        selected = epsilon_greedy(self.q[context, actions], self.epsilon)
+        return int(actions[selected])
 
     def update(self, context: int, action: int, reward: float) -> None:
         """Update only the context-action pair that generated the reward."""
