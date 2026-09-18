@@ -1,100 +1,143 @@
-# Exercise 8 — One-Decision Blackjack
+# Exercise 8 — A Two-Armed Blackjack Bandit
 
 ## Concept
 
-This exercise uses **associative search** to learn the expected reward of an action in a blackjack situation. Its context is
+This exercise has **one learning state and two actions**: from a two-card player total of 12, either hit once and then stand, or stand immediately. The agent does not condition its choice on the exact player cards, whether the hand is soft, or the dealer upcard. It learns which action is better **on average over randomly dealt 12s and dealer hands**.
+
+The physical hands vary, but they are not separate learning contexts. Restoring and reshuffling the two-deck shoe after every round gives each action a stationary reward distribution:
 
 $$
-s=(\text{hand value},\ \text{is soft},\ \text{dealer upcard},\ \text{can double}).
+q_*(a)=\mathbb{E}[R\mid A=a,\ \text{initial player total}=12].
 $$
 
-A soft hand has an ace currently counted as eleven. For example, A–4 is soft 15; after drawing a ten, it becomes hard 15. The dealer upcard is encoded as 1 for an ace and 10 for any of 10, J, Q, or K. The dealer's hole card is never included in the learner's context.
+There is no second player decision, no state transition to learn, and no future-value bootstrap. This replaces the previous multi-context Exercise 8 with an ordinary **two-armed bandit**.
 
-**The player makes exactly one decision.** Hit means draw one card and then stand automatically. Double means draw one card and then stand at twice the stake. The dealer completes its fixed policy, producing the reward for the selected action. Thus this is a contextual bandit with a sampled outcome, not full sequential blackjack learning. In particular, the learned value of hit excludes the option of hitting again.
+The goal is to reproduce the **parameter-study format of Figure 2.6 in Sutton and Barto**, not its exact curves. The book uses a different reward-generating testbed. Here, each plotted point measures an algorithm's average reward over its first 1,000 blackjack decisions, exposing the tradeoff between learning quickly and spending rewards on exploration.
 
-For each legal state-action pair, the agent estimates
+## The Game
+
+Each round starts with two standard 52-card decks, without jokers. Cards are drawn **without replacement within the round**; the complete shoe is restored and shuffled for the next round. Ace through nine each have eight physical cards, while 10, J, Q, and K are represented together by 32 ten-valued cards.
+
+The player receives a random two-card hand conditioned on a blackjack total of 12:
+
+| Hand | Physical unordered pairs | Conditional probability |
+| --- | --- | --- |
+| A–A (soft 12) | 28 | $28/504$ |
+| 10–2 | 256 | $256/504$ |
+| 9–3 | 64 | $64/504$ |
+| 8–4 | 64 | $64/504$ |
+| 7–5 | 64 | $64/504$ |
+| 6–6 | 28 | $28/504$ |
+
+These six hand types are **not equally likely** when drawing actual cards. For example, there are $32\times8=256$ ten–two pairs but only $\binom{8}{2}=28$ ace pairs. The implementation samples these weights, removes the two player cards, and shuffles the remaining 102 cards. This has the same relevant deal distribution as repeatedly shuffling all 104 cards until the first two total 12, without the cost of rejected deals.
+
+The dealer then receives an upcard and a hole card from the same shoe. **Neither card is an input to the agent.** They still determine the reward: after the player's decision, the dealer hits below 17 and stands on all 17s, including soft 17.
+
+- **Hit then stand:** draw exactly one player card, then stop. A player bust loses immediately.
+- **Stand:** draw no player card.
+- **Reward:** win $+1$, loss $-1$, push $0$.
+- Dealer blackjack beats a player's three-card 21. There is no initial player blackjack because every starting total is 12, so the earlier $+1.5$ bonus cannot occur.
+- There is no doubling, splitting, insurance, or sequence of player decisions.
+
+## Algorithms and Parameters
+
+All methods start fresh for each trial and parameter setting. Greedy ties are broken uniformly.
+
+| Method | Tuned parameter | Range | Fixed settings |
+| --- | --- | --- | --- |
+| $\varepsilon$-greedy | $\varepsilon$ | $1/128$ to $1$ | $Q_0=0$; sample-average updates |
+| Gradient bandit | $\alpha$ | $1/128$ to $1$ | Zero preferences; running-average reward baseline |
+| Greedy with optimistic initialization | $Q_0$ | $1/128$ to $4$ | $\varepsilon=0$; constant update step size $0.1$ |
+| UCB | $c$ | $1/128$ to $4$ | $Q_0=0$; sample-average updates |
+
+Each range uses powers of two: $1/128,1/64,\ldots,1,2,4$, omitting values above one for $\varepsilon$ and gradient $\alpha$. The gradient cap is an experimental choice requested here, not a general mathematical restriction on gradient-bandit step sizes. There are **36 method–parameter configurations**.
+
+### Action-Value Methods
+
+Epsilon-greedy chooses a uniformly random arm with probability $\varepsilon$ and a greedy arm otherwise. Its estimates, and UCB's estimates, use
 
 $$
-q(s,a)=\mathbb{E}[R\mid S=s,A=a]
+Q(A_t)\leftarrow Q(A_t)+\frac{R_t-Q(A_t)}{N(A_t)},
 $$
 
-using a sample average:
+where $N(A_t)$ includes the current selection. UCB selects an untried arm first; otherwise it maximizes
 
 $$
-N(s,a)\leftarrow N(s,a)+1,
+Q_t(a)+c\sqrt{\frac{\ln t}{N_t(a)}}.
+$$
+
+The optimistic agent instead initializes both estimates to the tested $Q_0$ and updates the selected estimate with
+
+$$
+Q(A_t)\leftarrow Q(A_t)+0.1\,[R_t-Q(A_t)].
+$$
+
+It has no explicit random exploration beyond tie-breaking. Disappointing rewards lower the selected estimate, making the other arm more attractive. The horizontal-axis parameter for this curve is **$Q_0$, not the fixed step size $0.1$**.
+
+### Gradient Bandit
+
+The gradient agent learns preferences $H_t(a)$ rather than reward estimates. It samples from a stable softmax policy and updates both preferences:
+
+$$
+\pi_t(a)=\frac{e^{H_t(a)}}{\sum_b e^{H_t(b)}},
 \qquad
-Q(s,a)\leftarrow Q(s,a)+\frac{R-Q(s,a)}{N(s,a)}.
+H_{t+1}(a)=H_t(a)+\alpha(R_t-\bar R_{t-1})
+\left[\mathbf{1}\{A_t=a\}-\pi_t(a)\right].
 $$
 
-There is no next-state bootstrap or discount factor. An $\varepsilon$-greedy policy explores only legal actions and otherwise selects a legal action with the largest estimate. Estimates and counts are kept separately for every context.
+The baseline $\bar R_{t-1}$ is the mean of preceding rewards, initialized to zero. It is updated only after the preference update, so the current reward does not enter its own baseline.
 
-## Rules
+## Exercise Summary
 
-- Every card is drawn independently with replacement: ace through nine each have probability $1/13$, and ten-valued cards have probability $4/13$. No card counting or finite-deck depletion is modeled.
-- The dealer hits below 17 and **stands on soft 17**.
-- Double is allowed only on the initial two-card hand, on any total. It draws exactly one card.
-- An ordinary win pays **+1**, a loss **−1**, and a push **0**. Doubling changes these to **+2**, **−2**, and **0**.
-- Standing on an **initial two-card 21 pays +1.5**, unless the dealer also has a two-card blackjack, in which case it is a push. The bonus is forfeited by hitting or doubling. A later 21 is not blackjack.
-- Dealer blackjack beats all non-natural player hands, including a multi-card 21. There is **no dealer peek before the player's decision**, so a double can lose the full two-unit stake to dealer blackjack.
-- Player bust loses immediately; the dealer need not draw. A standing player blackjack can also be settled immediately after checking the dealer's initial hand.
-- Splitting, surrender, and insurance are not available.
+`reinforcement_learning/playground/exercise008.py` uses **2,000 independent trials per configuration**, **1,000 steps per trial**, and seed `42`. The plotted score is
 
-## Starting States and Reachability
+$$
+\widehat J(\theta)
+=\frac{1}{2000}\sum_{i=1}^{2000}
+\left(\frac{1}{1000}\sum_{t=1}^{1000}R_{i,t}^{(\theta)}\right).
+$$
 
-Starting only with two cards would make `can_double=True` on every learning round. To also estimate values when doubling is unavailable, training chooses a two-card or three-card starting hand with equal probability. Busted three-card starts are discarded and redealt with the same hand length. These **exploring starts** supply contexts; they do not add earlier learned actions or rewards to the round. `OneDecisionBlackjack.reset(2)` instead deals only ordinary two-card starts.
+This averages **all of the first 1,000 rewards**, including initial learning and exploration—not just the final step or a post-training evaluation.
 
-Under the infinite-deck and one-action rules, total, softness, upcard, and doubling availability are sufficient: different card compositions with these same features have the same future reward distribution. Three-card starts cover all total/softness combinations possible after more than two cards.
+Configurations share a collection of independently shuffled deals. For comparison efficiency, the simulator calculates both possible outcomes of each deal, respecting which card a hit removes before the dealer plays. Each agent receives **only its selected action's reward**, never the alternative outcome, card information, or future rewards. The independent trials are vectorized in `BanditBatch`; no estimates are shared between trials.
 
-The table reserves totals **3 through 21**, but some combinations are impossible. A–2 is soft 13, not a decision total of 3. The minimum two-card hard total is 4; the minimum three-card hard total is 6. Two-card soft totals start at 12, while three-card soft totals start at 13. Hard 21 cannot be an initial two-card hand.
+![Average reward over the first 1,000 steps versus the tuned parameter for four blackjack bandit methods](assets/exercise_8_parameter_study.png)
 
-There are **520 reachable contexts** and **1,310 legal state-action pairs**. Unreachable cells are not trained, and illegal doubles are excluded from both exploration and exploitation.
+**Results.** The horizontal axis is the tuned parameter on a base-two logarithmic scale; the vertical axis is average reward over the first 1,000 steps. Red is epsilon-greedy, green is the gradient bandit, orange is optimistic greedy with fixed step size $0.1$, and blue is UCB. Shaded bands show one standard error, calculated across the independent trial-average rewards. The dashed line is the empirical mean of always selecting the better arm, not a learned policy or an exact theoretical bound.
 
-## Experiment and Results
+The sampled arm means were approximately **−0.32462 for hit-then-stand** and **−0.43502 for stand**. Hitting is better for this aggregate task, but both have negative mean rewards. Consequently, better learning means making the average reward **less negative**, not necessarily profitable.
 
-`reinforcement_learning/playground/exercise008.py` trains for **1,000,000 one-action rounds**, with $\varepsilon=0.2$, seed `42`, and zero initial estimates. Each round updates exactly one state-action pair. All 1,310 legal pairs were visited in the generated run, but their counts ranged from **1 to 17,543**: visiting every pair does not mean every estimate is accurate.
+- **Epsilon-greedy:** very small $\varepsilon$ can leave the agent favoring the wrong arm after unlucky early outcomes. Moderate exploration improves identification. Large $\varepsilon$ repeatedly chooses the worse arm even after learning. At $\varepsilon=1$, the policy is uniformly random and approaches the mean of the two arm values, about $-0.37982$.
+- **Gradient bandit:** small $\alpha$ changes preferences too slowly within the 1,000-step budget. Values near $1/8$–$1/4$ perform better here. Larger updates react more strongly to noisy individual wins and losses and can concentrate probability on the wrong arm, reducing performance.
+- **Optimistic greedy:** the curve is comparatively flat. Both arms have negative mean rewards, so even the smallest positive $Q_0$ is optimistic. Initial disappointment encourages switching at every tested setting, while the fixed step size keeps estimates sensitive to subsequent reward noise. Larger initialization does not provide a lasting advantage in this experiment.
+- **UCB:** small $c$ provides too little encouragement to revisit an arm whose first samples were unfavorable. Increasing $c$ improves learning up to the observed best setting of $c=1$. Values $2$ and $4$ spend more of the finite budget sampling the inferior arm, lowering average reward again.
 
-![Best estimated legal action by player total, softness, dealer upcard, and doubling availability](assets/exercise_8_policy.png)
+The best sampled settings in this run were:
 
-**Results.** The horizontal axis is the dealer upcard and the vertical axis is the player total. Rows distinguish hard and soft hands; columns distinguish whether doubling is available. Blue means hit once then stand, orange means stand, and green means double. Dark gray marks impossible states; light gray would mark reachable states where not every legal action has been sampled. High hard totals favor standing because another card often busts. Doubling appears around favorable drawing totals, such as hard 10–11 against several dealer upcards, because it increases the stake on a positive expected outcome. Standing on an initial soft 21 preserves the blackjack bonus.
+| Method | Best sampled parameter | Average reward |
+| --- | --- | --- |
+| Epsilon-greedy | $\varepsilon=1/4$ | −0.35208 |
+| Gradient bandit | $\alpha=1/8$ | −0.34820 |
+| Optimistic greedy | $Q_0=1/8$ | −0.35236 |
+| UCB | $c=1$ | −0.34528 |
 
-The irregular boundaries and isolated choices should not be read as an exact strategy chart. Rare contexts and exploratory actions can have noisy estimates. Some choices are also genuinely tied: from hard 4 or 5, neither standing nor drawing just one card can reach 17, so both win only when the dealer busts. Unlike full blackjack, there is no option to keep drawing from these low totals. The chart therefore describes **this one-decision game**, not full-game basic strategy.
+Nearby settings can differ by less than their sampling uncertainty, especially on the optimistic curve. These are empirical maxima over this grid and horizon, not universal optimal hyperparameters. The point of the figure is parameter sensitivity and the cost of exploration during learning.
 
-Selected estimates from the seeded run are below; parentheses give visit counts.
-
-| Initial state | Hit | Stand | Double |
-| --------------- | ----- | ------- | -------- |
-| Hard 11, dealer 6, can double | 0.227 (128) | −0.273 (121) | 0.681 (1,557) |
-| Hard 20, dealer 10, can double | −0.873 (979) | 0.446 (12,576) | −1.689 (1,002) |
-| Soft 21, dealer 6, can double | 0.160 (119) | 1.500 (1,593) | 0.553 (123) |
-
-Because hit and double have the same card outcome distribution here, their true values satisfy $q(s,\text{double})=2q(s,\text{hit})$ when doubling is legal. Separately sampled estimates need not satisfy that equality exactly. The 3:2 natural bonus applies only to stand, so it does not change this relationship.
-
-The complete [state-action value table](assets/exercise_8_action_values.csv) includes every reachable legal pair, its estimate, and its visit count. Unsampled estimates are exported as blank, rather than misleading zeros.
-
-## Running and Reusing the Exercise
+## Running the Comparison
 
 ```bash
 python -m reinforcement_learning.playground.exercise008
 ```
 
-Options include `--rounds`, `--epsilon`, `--seed`, and `--output-dir`. For example:
+For a faster check with fewer trials but the same 1,000-step horizon:
 
 ```bash
-MPLBACKEND=Agg python -m reinforcement_learning.playground.exercise008 --rounds 100000 --seed 42
+MPLBACKEND=Agg python -m reinforcement_learning.playground.exercise008 --trials 100
 ```
 
-By default, the script saves `exercise_8_action_values.csv` and `exercise_8_policy.png` in `docs/exercises/assets/`. More rounds improve coverage of rare pairs; the exported counts help identify estimates that still need evidence.
+Options are `--trials`, `--steps`, `--seed`, and `--output-dir`. The defaults reproduce the figure above and save:
 
-Reusable rules and state helpers live in `reinforcement_learning/blackjack.py`. The exercise imports `ContextualBanditAgent` from `reinforcement_learning/contextual_bandits.py`, extended with an optional legal-action list. Omitting that list preserves the behavior used by Exercise 7.
+- `docs/exercises/assets/exercise_8_parameter_study.png`
+- [Parameter scores and standard errors](assets/exercise_8_parameter_study.csv), including trial count, horizon, and seed.
 
-For programmatic access:
-
-```python
-from reinforcement_learning.blackjack import Action, BlackjackState
-from reinforcement_learning.playground.exercise008 import train
-
-agent = train(rounds=100_000)
-state = BlackjackState(hand_value=15, is_soft=True, dealer_upcard=6, can_double=True)
-print(agent.q[state.index, Action.STAND])
-print(agent.counts[state.index, Action.STAND])
-```
+Reusable finite-shoe dealing and reward logic live in `reinforcement_learning/blackjack_twelve.py`. This module reuses the ace-aware `hand_value()` helper from `reinforcement_learning/blackjack.py`, but does **not** use the earlier infinite-deck contextual environment. Tests cover shoe composition, conditional hand weights, one-action rewards, algorithm updates, parameter limits, reproducibility, and averaging across the complete horizon.
