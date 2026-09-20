@@ -1,5 +1,6 @@
 pr-description.md 
 feedback.md
+*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

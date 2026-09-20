@@ -31,7 +31,7 @@ from reinforcement_learning.projects import project002
 | -------- | ------------- |
 | `reinforcement_learning.projects.project001` | 2-action environment, random agent, sample-average Q updates |
 | `reinforcement_learning.projects.project002` | *k*-armed Gaussian bandit, ε-greedy agent, multi-trial runner, plotting |
-| `reinforcement_learning.projects.project010` | Finite-shoe blackjack, split-round returns, Hi-Lo count states, Monte Carlo learning |
+| `reinforcement_learning.projects.project010` | Finite-shoe blackjack, exact hard/soft totals, split-round context, Hi-Lo counting, masked Double Q-learning |
 
 See:
 
