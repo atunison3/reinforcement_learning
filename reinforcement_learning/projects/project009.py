@@ -1,4 +1,4 @@
-"""Exercise 9: What does a reward baseline do in a gradient bandit?
+"""Project 9: What does a reward baseline do in a gradient bandit?
 
 Compare five baselines on stationary 10-armed bandits, then repeat with all
 rewards shifted by +4. Also illustrate exact gradient variance and a paired
@@ -199,8 +199,8 @@ def plot_learning(result: ExperimentResult, directory: Path) -> None:
     baseline_figure.suptitle("A stationary bandit can still have a changing policy reward mean")
     figure.tight_layout()
     baseline_figure.tight_layout()
-    figure.savefig(directory / "exercise_9_learning.png", dpi=180, bbox_inches="tight")
-    baseline_figure.savefig(directory / "exercise_9_baselines.png", dpi=180, bbox_inches="tight")
+    figure.savefig(directory / "project_9_learning.png", dpi=180, bbox_inches="tight")
+    baseline_figure.savefig(directory / "project_9_baselines.png", dpi=180, bbox_inches="tight")
     plt.close(figure)
     plt.close(baseline_figure)
 
@@ -240,13 +240,13 @@ def main() -> None:
     parser.add_argument("--beta", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parents[2] / "docs" / "exercises" / "assets"
+        "--output-dir", type=Path, default=Path(__file__).resolve().parents[2] / "docs" / "projects" / "assets"
     )
     args = parser.parse_args()
     result = run_experiments(args.trials, args.steps, args.alpha, args.beta, args.seed)
-    save_summary(result, args.output_dir / "exercise_9_summary.csv")
+    save_summary(result, args.output_dir / "project_9_summary.csv")
     plot_learning(result, args.output_dir)
-    plot_variance_diagnostic(args.output_dir / "exercise_9_gradient_variance.png")
+    plot_variance_diagnostic(args.output_dir / "project_9_gradient_variance.png")
     window = min(200, result.steps)
     for (offset, name), curve in result.curves.items():
         print(

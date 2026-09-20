@@ -1,4 +1,4 @@
-# Exercise 6
+# Project 6
 
 ## Concept
 
@@ -37,11 +37,11 @@ $$
 
 where $q_*(a)$ is the true mean reward. Actions better than the current policy's expected reward gain preference on average, even if their individual rewards usually fall below the baseline.
 
-The baseline nevertheless changes the variability of sampled updates. A poorly placed baseline can produce large, noisy changes, especially with a large step size. **This exercise uses fixed baselines of $0$ and $4$, not a running average reward.** Its true action values are centered at zero; baseline $4$ does not shift the environment's rewards upward. Consequently, most rewards fall below $4$, often discouraging the sampled action even when it is relatively good. Cancellation in expectation does not make the finite-sample learning trajectories identical.
+The baseline nevertheless changes the variability of sampled updates. A poorly placed baseline can produce large, noisy changes, especially with a large step size. **This project uses fixed baselines of $0$ and $4$, not a running average reward.** Its true action values are centered at zero; baseline $4$ does not shift the environment's rewards upward. Consequently, most rewards fall below $4$, often discouraging the sampled action even when it is relatively good. Cancellation in expectation does not make the finite-sample learning trajectories identical.
 
-## Exercise Summary
+## Project Summary
 
-`reinforcement_learning/playground/exercise006.py` compares four gradient-bandit configurations:
+`reinforcement_learning/projects/project006.py` compares four gradient-bandit configurations:
 
 - A stationary 10-armed bandit, with true action values $q_*(a)\sim\mathcal{N}(0,1)$ sampled independently at each trial's start.
 - Observed rewards $R_t\mid A_t=a\sim\mathcal{N}(q_*(a),1)$.
@@ -50,7 +50,7 @@ The baseline nevertheless changes the variability of sampled updates. A poorly p
 
 Within each trial, all configurations face the same true action values but sample their own actions and rewards. The experiment computes both average reward and the percentage of trials selecting the true optimal action. The current plotting function saves only the optimal-action percentage figure.
 
-![Optimal-action percentage for gradient bandits with two step sizes and two fixed baselines](assets/exercise_6_gradient_bandit.png)
+![Optimal-action percentage for gradient bandits with two step sizes and two fixed baselines](assets/project_6_gradient_bandit.png)
 
 **Results.** The horizontal axis is the step; the vertical axis is the percentage of trials selecting the action with the highest true mean reward. Orange curves use baseline $0$, and blue curves use baseline $4$; full-opacity curves use $\alpha=0.1$, and lighter curves use $\alpha=0.4$. All begin near the uniform policy's 10% success rate. With baseline $0$, the larger step size improves faster initially, but the smaller step size overtakes it and reaches roughly 84% by step 1,000, compared with about 70% for $\alpha=0.4$. Larger updates rapidly concentrate the policy, but noisy early rewards can favor a suboptimal action, making alternatives less likely to be sampled and slowing correction. Smaller updates preserve broader sampling longer and achieve better later performance in this experiment.
 

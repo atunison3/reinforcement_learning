@@ -1,4 +1,4 @@
-"""Reproducibility, baseline traces, exports, and exercise demonstrations."""
+"""Reproducibility, baseline traces, exports, and project demonstrations."""
 
 import csv
 import unittest
@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 
-from reinforcement_learning.playground.exercise009 import (
+from reinforcement_learning.projects.project009 import (
     CONFIGURATIONS,
     REWARD_OFFSETS,
     plot_learning,
@@ -18,7 +18,7 @@ from reinforcement_learning.playground.exercise009 import (
 )
 
 
-class TestGradientBaselineExercise(unittest.TestCase):
+class TestGradientBaselineProject(unittest.TestCase):
     def test_reproducible_curves_and_fixed_baseline_traces(self) -> None:
         first = run_experiments(trials=5, steps=10, seed=7)
         second = run_experiments(trials=5, steps=10, seed=7)
@@ -60,7 +60,7 @@ class TestGradientBaselineExercise(unittest.TestCase):
             self.assertTrue(all(row["final_window"] == "7" and row["trials"] == "3" for row in rows))
             for row in rows:
                 self.assertEqual(row["mean_reward"], row["final_reward"])
-            for filename in ("exercise_9_learning.png", "exercise_9_baselines.png", "variance.png"):
+            for filename in ("project_9_learning.png", "project_9_baselines.png", "variance.png"):
                 self.assertGreater((root / filename).stat().st_size, 0)
 
     def test_invalid_experiment_inputs(self) -> None:

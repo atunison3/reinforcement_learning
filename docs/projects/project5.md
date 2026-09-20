@@ -1,4 +1,4 @@
-# Exercise 5
+# Project 5
 
 ## Upper-Confidence-Bound Action Selection
 
@@ -12,13 +12,13 @@ Here, $Q_t(a)$ is the estimated action value, $N_t(a)$ is the number of times ac
 
 The implementation selects every untried action before applying the formula. Once all actions have been sampled, it selects the action with the largest UCB score and updates its value using an incremental sample average.
 
-## Exercise Summary
+## Project Summary
 
-`reinforcement_learning/playground/exercise005.py` compares UCB with $\varepsilon$-greedy action selection in a stationary 10-armed bandit. At the start of each trial, the true mean reward of every action is sampled from $\mathcal{N}(0,1)$, and each observed reward is a noisy sample with standard deviation $1$.
+`reinforcement_learning/projects/project005.py` compares UCB with $\varepsilon$-greedy action selection in a stationary 10-armed bandit. At the start of each trial, the true mean reward of every action is sampled from $\mathcal{N}(0,1)$, and each observed reward is a noisy sample with standard deviation $1$.
 
 Both agents use sample-average action-value updates. UCB uses $c=2$, while $\varepsilon$-greedy uses $\varepsilon=0.1$. Each method is run for 2,000 trials of 1,000 steps. The agents face the same true action values within each trial, and the program plots their average reward against the step number.
 
-![Average reward for UCB and epsilon-greedy action selection](assets/exercise_5_ucb_vs_epsilon_greedy.png)
+![Average reward for UCB and epsilon-greedy action selection](assets/project_5_ucb_vs_epsilon_greedy.png)
 
 **Results.** The x-axis is the step and the y-axis is average reward. UCB is shown in blue and $\varepsilon$-greedy is shown in gray. UCB obtains higher average reward after its initial exploration phase because its uncertainty bonus directs additional trials toward actions that have not yet been estimated reliably. Epsilon-greedy continues to select a random action 10% of the time, including actions that already have good or poor estimates, so some exploration is less informative.
 

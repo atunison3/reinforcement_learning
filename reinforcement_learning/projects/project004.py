@@ -1,4 +1,4 @@
-"""Exercise 4: Tracking a Nonstationary Problem with optimistic initial values"""
+"""Project 4: Tracking a Nonstationary Problem with optimistic initial values"""
 
 from typing import Any
 
@@ -159,7 +159,7 @@ def plot_results(results: dict[float | None, tuple[np.ndarray, np.ndarray]], k_a
     plt.legend()
     plt.grid(alpha=0.3)
     plt.savefig(
-        f"docs/exercises/assets/exercise_4_average_reward_k{k_arms}.png",
+        f"docs/projects/assets/project_4_average_reward_k{k_arms}.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -182,7 +182,7 @@ def plot_results(results: dict[float | None, tuple[np.ndarray, np.ndarray]], k_a
     plt.legend()
     plt.grid(alpha=0.3)
     plt.savefig(
-        f"docs/exercises/assets/exercise_4_optimal_action_percentage_K{k_arms}.png",
+        f"docs/projects/assets/project_4_optimal_action_percentage_K{k_arms}.png",
         dpi=300,
         bbox_inches="tight",
     )

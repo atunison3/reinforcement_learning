@@ -62,7 +62,7 @@ python -m pip install -r $env:TEMP\rl-requirements.txt
 python -m pip install -e .
 ```
 
-Playground modules also need **NumPy** and **Matplotlib** (included in `requirements.txt`).
+Project modules also need **NumPy** and **Matplotlib** (included in `requirements.txt`).
 
 ## Pre-commit
 

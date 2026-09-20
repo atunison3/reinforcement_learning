@@ -1,4 +1,4 @@
-"""Exercise 5: Compare Upper Confidence Bound and epsilon-greedy selection."""
+"""Project 5: Compare Upper Confidence Bound and epsilon-greedy selection."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,7 +118,7 @@ def plot_results(ucb_rewards: np.ndarray, epsilon_rewards: np.ndarray) -> None:
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(
-        "docs/exercises/assets/exercise_5_ucb_vs_epsilon_greedy.png",
+        "docs/projects/assets/project_5_ucb_vs_epsilon_greedy.png",
         dpi=300,
         bbox_inches="tight",
     )

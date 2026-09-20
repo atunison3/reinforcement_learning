@@ -1,12 +1,12 @@
 # Installation
 
-These steps install the package for **use** (running playground modules and importing the library).
+These steps install the package for **use** (running project modules and importing the library).
 
 ## Requirements
 
 - Python **3.14** or newer (`requires-python = ">=3.14"` in `pyproject.toml`)
 - `pip`
-- Runtime libraries used by the playground code: **NumPy** and **Matplotlib** (listed in `requirements.txt`; not declared under `[project].dependencies` in `pyproject.toml`)
+- Runtime libraries used by the project code: **NumPy** and **Matplotlib** (listed in `requirements.txt`; not declared under `[project].dependencies` in `pyproject.toml`)
 
 The project is not assumed to be published on PyPI. Install from a local clone.
 
@@ -63,7 +63,7 @@ python -m pip install numpy matplotlib
 ## Verify the installation
 
 ```bash
-python -c "from reinforcement_learning.playground import exercise001, exercise002; print('ok')"
+python -c "from reinforcement_learning.projects import project001, project002; print('ok')"
 ```
 
 If the import succeeds, the package is available on your `PYTHONPATH` / site-packages.

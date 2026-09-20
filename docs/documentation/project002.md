@@ -1,6 +1,6 @@
-# Playground Exercise 2
+# Project 2
 
-Module: `reinforcement_learning.playground.exercise002`
+Module: `reinforcement_learning.projects.project002`
 
 A *k*-armed Gaussian bandit similar in spirit to the Chapter 2 10-armed testbed. Agents select actions greedily or with ε-greedy exploration and update sample-average action values.
 
@@ -126,8 +126,8 @@ plot_results(
 
 Writes two PNG files (relative to the process working directory):
 
-- `docs/exercises/assets/exercise_2_average_reward.png`
-- `docs/exercises/assets/exercise_2_optimal_action_percentage.png`
+- `docs/projects/assets/project_2_average_reward.png`
+- `docs/projects/assets/project_2_optimal_action_percentage.png`
 
 ## `loading_bar`
 
@@ -140,7 +140,7 @@ Returns a string such as `[████░░░░]  40.00%` used by `run_exper
 ## Script behavior
 
 ```bash
-python -m reinforcement_learning.playground.exercise002
+python -m reinforcement_learning.projects.project002
 ```
 
 Runs:
@@ -153,7 +153,7 @@ plot_results(results)
 ## Example
 
 ```python
-from reinforcement_learning.playground.exercise002 import (
+from reinforcement_learning.projects.project002 import (
     plot_results,
     run_experiments,
 )
@@ -162,4 +162,4 @@ results = run_experiments(epsilons=[0.0, 0.1], trials=100, steps=500)
 plot_results(results)
 ```
 
-Saved figures are also embedded under [Exercise Plots](../exercises/exercise.md).
+Saved figures are also embedded under [Project Plots](../projects/project2.md).

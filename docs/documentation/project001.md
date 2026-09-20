@@ -1,6 +1,6 @@
-# Playground Exercise 1
+# Project 1
 
-Module: `reinforcement_learning.playground.exercise001`
+Module: `reinforcement_learning.projects.project001`
 
 A minimal 2-armed setup used to practice the environment / agent loop.
 
@@ -79,13 +79,13 @@ Q \leftarrow Q + \frac{1}{N}(R - Q)
 Running the module as `__main__` creates an environment and agent, runs 1000 episodes, and prints `agent.q`.
 
 ```bash
-python -m reinforcement_learning.playground.exercise001
+python -m reinforcement_learning.projects.project001
 ```
 
 ## Example
 
 ```python
-from reinforcement_learning.playground.exercise001 import Agent, Environment
+from reinforcement_learning.projects.project001 import Agent, Environment
 
 env = Environment()
 agent = Agent()

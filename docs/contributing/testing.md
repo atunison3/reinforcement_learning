@@ -15,11 +15,11 @@ This matches pre-commit and CI.
 ### Targeted runs
 
 ```bash
-python -m unittest tests.test_playground.test_exercise002 -v
-python -m unittest tests.test_playground.test_exercise002.TestExercise002.test_01 -v
+python -m unittest tests.test_project008 -v
+python -m unittest tests.test_project008.TestBlackjackParameterStudy.test_export_and_parameter_plot -v
 ```
 
-Test packages live under `tests/test_playground/`.
+Project tests live in `tests/test_project*.py`.
 
 ## Linting and formatting
 

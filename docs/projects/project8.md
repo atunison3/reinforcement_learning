@@ -1,8 +1,8 @@
-# Exercise 8 — A Two-Armed Blackjack Bandit
+# Project 8 — A Two-Armed Blackjack Bandit
 
 ## Concept
 
-This exercise has **one learning state and two actions**: from a two-card player total of 12, either hit once and then stand, or stand immediately. The agent does not condition its choice on the exact player cards, whether the hand is soft, or the dealer upcard. It learns which action is better **on average over randomly dealt 12s and dealer hands**.
+This project has **one learning state and two actions**: from a two-card player total of 12, either hit once and then stand, or stand immediately. The agent does not condition its choice on the exact player cards, whether the hand is soft, or the dealer upcard. It learns which action is better **on average over randomly dealt 12s and dealer hands**.
 
 The physical hands vary, but they are not separate learning contexts. Restoring and reshuffling the two-deck shoe after every round gives each action a stationary reward distribution:
 
@@ -10,7 +10,7 @@ $$
 q_*(a)=\mathbb{E}[R\mid A=a,\ \text{initial player total}=12].
 $$
 
-There is no second player decision, no state transition to learn, and no future-value bootstrap. This replaces the previous multi-context Exercise 8 with an ordinary **two-armed bandit**.
+There is no second player decision, no state transition to learn, and no future-value bootstrap. This replaces the previous multi-context Project 8 with an ordinary **two-armed bandit**.
 
 The goal is to reproduce the **parameter-study format of Figure 2.6 in Sutton and Barto**, not its exact curves. The book uses a different reward-generating testbed. Here, each plotted point measures an algorithm's average reward over its first 1,000 blackjack decisions, exposing the tradeoff between learning quickly and spending rewards on exploration.
 
@@ -87,9 +87,9 @@ $$
 
 The baseline $\bar R_{t-1}$ is the mean of preceding rewards, initialized to zero. It is updated only after the preference update, so the current reward does not enter its own baseline.
 
-## Exercise Summary
+## Project Summary
 
-`reinforcement_learning/playground/exercise008.py` uses **2,000 independent trials per configuration**, **1,000 steps per trial**, and seed `42`. The plotted score is
+`reinforcement_learning/projects/project008.py` uses **2,000 independent trials per configuration**, **1,000 steps per trial**, and seed `42`. The plotted score is
 
 $$
 \widehat J(\theta)
@@ -101,7 +101,7 @@ This averages **all of the first 1,000 rewards**, including initial learning and
 
 Configurations share a collection of independently shuffled deals. For comparison efficiency, the simulator calculates both possible outcomes of each deal, respecting which card a hit removes before the dealer plays. Each agent receives **only its selected action's reward**, never the alternative outcome, card information, or future rewards. The independent trials are vectorized in `BanditBatch`; no estimates are shared between trials.
 
-![Average reward over the first 1,000 steps versus the tuned parameter for four blackjack bandit methods](assets/exercise_8_parameter_study.png)
+![Average reward over the first 1,000 steps versus the tuned parameter for four blackjack bandit methods](assets/project_8_parameter_study.png)
 
 **Results.** The horizontal axis is the tuned parameter on a base-two logarithmic scale; the vertical axis is average reward over the first 1,000 steps. Red is epsilon-greedy, green is the gradient bandit, orange is optimistic greedy with fixed step size $0.1$, and blue is UCB. Shaded bands show one standard error, calculated across the independent trial-average rewards. The dashed line is the empirical mean of always selecting the better arm, not a learned policy or an exact theoretical bound.
 
@@ -126,18 +126,18 @@ Nearby settings can differ by less than their sampling uncertainty, especially o
 ## Running the Comparison
 
 ```bash
-python -m reinforcement_learning.playground.exercise008
+python -m reinforcement_learning.projects.project008
 ```
 
 For a faster check with fewer trials but the same 1,000-step horizon:
 
 ```bash
-MPLBACKEND=Agg python -m reinforcement_learning.playground.exercise008 --trials 100
+MPLBACKEND=Agg python -m reinforcement_learning.projects.project008 --trials 100
 ```
 
 Options are `--trials`, `--steps`, `--seed`, and `--output-dir`. The defaults reproduce the figure above and save:
 
-- `docs/exercises/assets/exercise_8_parameter_study.png`
-- [Parameter scores and standard errors](assets/exercise_8_parameter_study.csv), including trial count, horizon, and seed.
+- `docs/projects/assets/project_8_parameter_study.png`
+- [Parameter scores and standard errors](assets/project_8_parameter_study.csv), including trial count, horizon, and seed.
 
 Reusable finite-shoe dealing and reward logic live in `reinforcement_learning/blackjack_twelve.py`. This module reuses the ace-aware `hand_value()` helper from `reinforcement_learning/blackjack.py`, but does **not** use the earlier infinite-deck contextual environment. Tests cover shoe composition, conditional hand weights, one-action rewards, algorithm updates, parameter limits, reproducibility, and averaging across the complete horizon.

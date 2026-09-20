@@ -1,8 +1,8 @@
-# Exercise 7 — Associative Search
+# Project 7 — Associative Search
 
 ## Concept
 
-An **associative search**, or **contextual bandit**, learns which action is best *in each observed situation*. Instead of finding one globally preferred action, the agent learns a policy that associates a context with an action. The cue identifies the situation, but it does not reveal the action values: the agent must still discover good actions through trial and error. This exercise implements the setting in Sutton and Barto, Section 2.9, using the two cases from Exercise 2.10 in the supplied image.
+An **associative search**, or **contextual bandit**, learns which action is best *in each observed situation*. Instead of finding one globally preferred action, the agent learns a policy that associates a context with an action. The cue identifies the situation, but it does not reveal the action values: the agent must still discover good actions through trial and error. This project implements the setting in Sutton and Barto, Section 2.9, using the two cases from Exercise 2.10 in the supplied image.
 
 Let $S_t$ denote the context observed before choosing action $A_t$. The true contextual action value is
 
@@ -73,9 +73,9 @@ $$
 
 The reusable function `optimal_expected_rewards()` computes these two benchmarks. Here, the cue is worth $55-50=5$ expected reward units per step. It does not increase either action's rewards; it allows the agent to choose the better action for the case actually present.
 
-## Exercise Summary
+## Project Summary
 
-`reinforcement_learning/playground/exercise007.py` compares two otherwise identical learners:
+`reinforcement_learning/projects/project007.py` compares two otherwise identical learners:
 
 - **Without context:** one row of action-value estimates, updated using rewards from both cases. The agent always receives the same dummy context.
 - **With context:** one row per case, with the current case revealed before action selection.
@@ -86,7 +86,7 @@ Within each trial, both learners face the same case sequence and the same sample
 
 ### Average Reward
 
-![Average reward with and without the current context](assets/exercise_7_average_reward.png)
+![Average reward with and without the current context](assets/project_7_average_reward.png)
 
 **Results.** The horizontal axis is the step, shown in non-overlapping 20-step blocks at each block's endpoint; the vertical axis is reward averaged over trials and steps in that block. The gray learner remains near its no-context optimum of 50. The blue contextual learner improves rapidly as exploration reveals the better action in each case. Zero initialization initially favors repeating the first positively rewarded action over an untried action with estimate zero; exploration is needed to correct an initially wrong preference. Keeping separate estimates then lets the agent exploit action 2 in A and action 1 in B, raising reward toward 54.5.
 
@@ -100,7 +100,7 @@ The remaining gap is an exploration cost, not missing contextual information. Sh
 
 ### Optimal-Action Selection
 
-![Percentage selecting the best action for the current case](assets/exercise_7_optimal_action_percentage.png)
+![Percentage selecting the best action for the current case](assets/project_7_optimal_action_percentage.png)
 
 **Results.** The horizontal axis uses the same 20-step blocks, and the vertical axis is the percentage of actions that are best for the **actual current case**. The blue contextual learner rises toward 95%, the dotted reference, because it exploits correctly 90% of the time and also chooses correctly on half of its exploratory steps: $1-\varepsilon+\varepsilon/2=0.95$. The black dashed reference is 100%, achievable with a learned greedy contextual policy. The gray learner stays near the dashed 50% reference because its chosen action cannot depend on the independently drawn hidden case. This does not mean it is failing at its own information-limited task: both actions are equally good in expectation without the cue.
 
@@ -118,14 +118,14 @@ These finite-run measurements agree with the respective targets of 50 and 54.5 r
 From the project root, with the repository's NumPy and Matplotlib dependencies installed:
 
 ```bash
-python -m reinforcement_learning.playground.exercise007
+python -m reinforcement_learning.projects.project007
 ```
 
-For a headless run, prefix the command with `MPLBACKEND=Agg`. The script prints the analytical answers and empirical summary and saves both plots in `docs/exercises/assets/`; it does not open a GUI window.
+For a headless run, prefix the command with `MPLBACKEND=Agg`. The script prints the analytical answers and empirical summary and saves both plots in `docs/projects/assets/`; it does not open a GUI window.
 
 The reusable module is `reinforcement_learning/contextual_bandits.py`:
 
 - `ContextualBanditAgent`: separate sample-average estimates and counts for arbitrary numbers of contexts and actions; one context recovers an ordinary bandit agent.
 - `optimal_expected_rewards`: calculates known-value optimal expected rewards with and without context for a supplied action-value table and context probabilities.
 
-The agent reuses `epsilon_greedy()` from `reinforcement_learning/policies.py`. Tests in `tests/test_contextual_bandits.py` and `tests/test_exercise007.py` cover the analytical answers, context-specific updates, action selection, validation, reproducibility, learning behavior, and figure generation.
+The agent reuses `epsilon_greedy()` from `reinforcement_learning/policies.py`. Tests in `tests/test_contextual_bandits.py` and `tests/test_project007.py` cover the analytical answers, context-specific updates, action selection, validation, reproducibility, learning behavior, and figure generation.

@@ -1,7 +1,7 @@
-"""Exercise 8: Figure-2.6-style parameter study on the blackjack-12 bandit.
+"""Project 8: Figure-2.6-style parameter study on the blackjack-12 bandit.
 
 There is one learning state and two arms: hit once then stand, or stand.
-Run ``python -m reinforcement_learning.playground.exercise008`` to compare
+Run ``python -m reinforcement_learning.projects.project008`` to compare
 four methods by average reward over their first 1,000 decisions.
 """
 
@@ -227,12 +227,12 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=1_000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
-        "--output-dir", type=Path, default=Path(__file__).resolve().parents[2] / "docs" / "exercises" / "assets"
+        "--output-dir", type=Path, default=Path(__file__).resolve().parents[2] / "docs" / "projects" / "assets"
     )
     args = parser.parse_args()
     result = run_experiments(trials=args.trials, steps=args.steps, seed=args.seed)
-    csv_path = args.output_dir / "exercise_8_parameter_study.csv"
-    figure_path = args.output_dir / "exercise_8_parameter_study.png"
+    csv_path = args.output_dir / "project_8_parameter_study.csv"
+    figure_path = args.output_dir / "project_8_parameter_study.png"
     save_results(result, csv_path)
     plot_results(result, figure_path)
     print(f"Empirical arm means: hit then stand = {result.action_means[0]:.5f}; stand = {result.action_means[1]:.5f}")

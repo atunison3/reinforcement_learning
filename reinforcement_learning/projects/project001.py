@@ -1,4 +1,4 @@
-"""Exercise 1 in my playground to help understand reinforcement learning.
+"""Project 1: A two-armed bandit for exploring reinforcement learning.
 
 This module explores a 2 armed bandit. An agent randomly chooses between going left and right.
 To its left (0) is a cliff, it falls off and -1 points. To its right (1) is not a cliff, +1.

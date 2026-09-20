@@ -9,7 +9,7 @@ from unittest.mock import patch
 import numpy as np
 
 from reinforcement_learning.blackjack_twelve import TwelveRound
-from reinforcement_learning.playground.exercise008 import (
+from reinforcement_learning.projects.project008 import (
     METHODS,
     PARAMETERS,
     BanditBatch,
@@ -105,7 +105,7 @@ class TestBlackjackParameterStudy(unittest.TestCase):
         win = TwelveRound((1, 1), (10, 6), np.array([10, 10]))
         # Each of two trials gets rewards [-1, +1, -1], regardless of actions.
         with patch(
-            "reinforcement_learning.playground.exercise008.TwoDeckTwelveBandit.deal",
+            "reinforcement_learning.projects.project008.TwoDeckTwelveBandit.deal",
             side_effect=[loss, loss, win, win, loss, loss],
         ):
             result = run_experiments(trials=2, steps=3, parameters=(1.0,))

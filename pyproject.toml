@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "reinforcement_learning"
 version = "0.1.0"
-description = "Notes and exercises while reading Reinforcement Learning by Phil Winder"
+description = "Lessons, Sutton and Barto exercise responses, and reinforcement-learning projects"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.14"

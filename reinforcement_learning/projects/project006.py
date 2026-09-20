@@ -1,4 +1,4 @@
-"""Exercise 6: Compare gradient bandit algorithms."""
+"""Project 6: Compare gradient bandit algorithms."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -138,7 +138,7 @@ def plot_results(
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.savefig(
-        "docs/exercises/assets/exercise_6_gradient_bandit.png",
+        "docs/projects/assets/project_6_gradient_bandit.png",
         dpi=300,
         bbox_inches="tight",
     )

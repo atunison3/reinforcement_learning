@@ -1,4 +1,4 @@
-"""Small reproducible integration tests for the associative-search exercise."""
+"""Small reproducible integration tests for the associative-search project."""
 
 import unittest
 from pathlib import Path
@@ -6,10 +6,10 @@ from tempfile import TemporaryDirectory
 
 import numpy as np
 
-from reinforcement_learning.playground.exercise007 import plot_results, run_experiments
+from reinforcement_learning.projects.project007 import plot_results, run_experiments
 
 
-class TestAssociativeSearchExercise(unittest.TestCase):
+class TestAssociativeSearchProject(unittest.TestCase):
     def test_curves_are_reproducible_and_have_requested_length(self) -> None:
         first = run_experiments(trials=3, steps=10, seed=7)
         second = run_experiments(trials=3, steps=10, seed=7)
@@ -39,7 +39,7 @@ class TestAssociativeSearchExercise(unittest.TestCase):
         with TemporaryDirectory() as directory:
             output = Path(directory) / "assets"
             plot_results(results, output_directory=output, block_size=5)
-            for name in ("exercise_7_average_reward.png", "exercise_7_optimal_action_percentage.png"):
+            for name in ("project_7_average_reward.png", "project_7_optimal_action_percentage.png"):
                 image = output / name
                 self.assertTrue(image.is_file())
                 self.assertGreater(image.stat().st_size, 0)

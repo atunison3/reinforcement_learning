@@ -1,4 +1,17 @@
-"""Exercise 3: Tracking a Nonstationary Problem"""
+"""Project 2: 10 armed bandit with a greedy method
+
+In this project, a 10 armed bandit will be established using a Gaussian distribution. This is similar
+to the 10-armed bandit in Chapter 2 of Sutton's Reinforcement Learning. The goal here is to establish a
+agent that chooses to exploit actions by choosing the action with the greatest potential reward.
+
+Methods:
+1. Declare the Environment with ten reward means randomly picked from a Gaussian distribution N~(0,1). When
+returning a reward to the agent, the reward will again be given using a Gaussian distribution with variance 1
+and mean equal to the variance randomly assigned.
+2. Establish the Agent. The agent is to choose actions greedily based on average rewards. In scenarios where
+actions have a tie, the agent is to randomly choose between actions.
+3. Perform an iteration of 1000 steps for the agent to learn the most optimal action.
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +27,7 @@ class Environment:
         """Returns the base state"""
 
         # Assign the reward means using Normal distrubtion
-        self.rewards = np.zeros(self.k)
+        self.rewards = np.random.normal(0, 1, 10)
 
         # Determine which reward is optimal
         self.optimal_action = int(np.argmax(self.rewards))
@@ -28,29 +41,19 @@ class Environment:
         reward = np.random.normal(self.rewards[action], 1)
         optimal = action == self.optimal_action
 
-        # Update the moving targets
-        self.rewards += np.random.normal(0, 0.01, self.k)
-
         return float(reward), optimal
 
 
 class Agent:
-    def __init__(self, epsilon: float = 0.1, k: int = 10, step_size: float | None = 0.1):
+    def __init__(self, epsilon: float = 0.0, k: int = 10):
 
         if (epsilon < 0) or (epsilon) > 1:
             raise ValueError(f"Invalid epsilon value: {epsilon}")
-        if step_size and ((step_size <= 0) or (step_size > 1)):
-            raise ValueError(f"Invalid step size vlaue: {step_size}")
 
-        self.step_size: float | None = None
-
-        if step_size:
-            self.alpha = step_size
-        else:
-            self.n = np.zeros(k)
         self.epsilon = epsilon
         self.k = k
         self.q = np.zeros(k)
+        self.n = np.zeros(k)
 
     def choose_action(self) -> int:
         """Agent chooses action"""
@@ -68,36 +71,34 @@ class Agent:
     def update(self, action: int, reward: float) -> None:
         """Updates the agent's policy"""
 
-        # Calculate the new average reward
-        Q = self.q[action]
+        # Increment the counter
+        self.n[action] += 1
 
-        if self.alpha:
-            self.q[action] = Q + self.alpha * (reward - Q)
-        else:
-            self.n[action] += 1
-            N = self.n[action]
-            self.q[action] = Q + 1 / N * (reward - Q)
+        # Calculate the new average reward
+        N = self.n[action]
+        Q = self.q[action]
+        self.q[action] = Q + 1 / N * (reward - Q)
 
 
 def run_experiments(
-    alphas: list[float | None],
+    epsilons: list[float],
     trials: int = 2000,
-    steps: int = 10000,
-) -> dict[float | None, tuple[np.ndarray, np.ndarray]]:
-    """Run repeated k-armed bandit experiments for multiple alpha values."""
+    steps: int = 1000,
+) -> dict[float, tuple[np.ndarray, np.ndarray]]:
+    """Run repeated k-armed bandit experiments for multiple epsilon values."""
 
     results = {}
 
-    for alpha in alphas:
-        print(f"\nα = {alpha}")
+    for epsilon in epsilons:
+        print(f"\nε = {epsilon}")
 
         average_rewards, percent_optimal = run_experiment(
             trials=trials,
             steps=steps,
-            alpha=alpha,
+            epsilon=epsilon,
         )
 
-        results[alpha] = (
+        results[epsilon] = (
             average_rewards,
             percent_optimal,
         )
@@ -107,8 +108,8 @@ def run_experiments(
 
 def run_experiment(
     trials: int = 2000,
-    steps: int = 10000,
-    alpha: float | None = 0.1,
+    steps: int = 1000,
+    epsilon: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Run repeated k-armed bandit trials."""
 
@@ -120,7 +121,7 @@ def run_experiment(
         print(f"\r{loading_bar(trial + 1, trials)}", end="")
 
         env = Environment()
-        agent = Agent(epsilon=0.1, step_size=alpha)
+        agent = Agent(epsilon=epsilon)
 
         env.reset()
 
@@ -141,21 +142,20 @@ def run_experiment(
 
 
 def plot_results(
-    results: dict[float | None, tuple[np.ndarray, np.ndarray]],
+    results: dict[float, tuple[np.ndarray, np.ndarray]],
 ) -> None:
-    """Save comparison plots for multiple alpha values."""
+    """Save comparison plots for multiple epsilon values."""
 
     first_result = next(iter(results.values()))
     steps = np.arange(1, len(first_result[0]) + 1)
 
     plt.figure(figsize=(10, 6))
 
-    for alpha, (average_rewards, _) in results.items():
-        label = "sample average" if alpha is None else f"α = {alpha}"
+    for epsilon, (average_rewards, _) in results.items():
         plt.plot(
             steps,
             average_rewards,
-            label=label,
+            label=f"ε = {epsilon}",
         )
 
     plt.xlabel("Step")
@@ -164,7 +164,7 @@ def plot_results(
     plt.legend()
     plt.grid(alpha=0.3)
     plt.savefig(
-        "docs/exercises/assets/exercise_3_average_reward.png",
+        "docs/projects/assets/project_2_average_reward.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -172,12 +172,11 @@ def plot_results(
 
     plt.figure(figsize=(10, 6))
 
-    for alpha, (_, percent_optimal) in results.items():
-        label = "sample average" if alpha is None else f"α = {alpha}"
+    for epsilon, (_, percent_optimal) in results.items():
         plt.plot(
             steps,
             percent_optimal,
-            label=label,
+            label=f"ε = {epsilon}",
         )
 
     plt.xlabel("Step")
@@ -187,7 +186,7 @@ def plot_results(
     plt.legend()
     plt.grid(alpha=0.3)
     plt.savefig(
-        "docs/exercises/assets/exercise_3_optimal_action_percentage.png",
+        "docs/projects/assets/project_2_optimal_action_percentage.png",
         dpi=300,
         bbox_inches="tight",
     )
@@ -209,9 +208,9 @@ def loading_bar(current: int, total: int, width: int = 20) -> str:
 
 if __name__ == "__main__":
     results = run_experiments(
-        alphas=[None, 0.1],
-        trials=2_000,
-        steps=10_000,
+        epsilons=[0.0, 0.01, 0.1],
+        trials=2000,
+        steps=1000,
     )
 
     plot_results(results)

@@ -1,6 +1,6 @@
-"""Exercise 7: Associative search using Sutton and Barto's Exercise 2.10.
+"""Project 7: Associative search using Sutton and Barto's Exercise 2.10.
 
-Run with ``python -m reinforcement_learning.playground.exercise007``.
+Run with ``python -m reinforcement_learning.projects.project007``.
 The experiment saves two figures and prints empirical and analytic rewards.
 """
 
@@ -94,7 +94,7 @@ def plot_results(
     if block_size < 1:
         raise ValueError("`block_size` must be positive")
     if output_directory is None:
-        output_directory = Path(__file__).resolve().parents[2] / "docs" / "exercises" / "assets"
+        output_directory = Path(__file__).resolve().parents[2] / "docs" / "projects" / "assets"
     output_directory.mkdir(parents=True, exist_ok=True)
 
     without_context, with_context = optimal_expected_rewards(ACTION_VALUES, CONTEXT_PROBABILITIES)
@@ -137,7 +137,7 @@ def plot_results(
         axis.legend()
         axis.grid(alpha=0.3)
         figure.tight_layout()
-        figure.savefig(output_directory / f"exercise_7_{metric}.png", dpi=200, bbox_inches="tight")
+        figure.savefig(output_directory / f"project_7_{metric}.png", dpi=200, bbox_inches="tight")
         plt.close(figure)
 
 

@@ -1,10 +1,10 @@
-# Exercise 3
+# Project 3
 
 ## Tracking a Nonstationary Problem
 
 Most of the theory of action-value methods is developed under the assumption that the problem is *stationary*—that the true values $q_*(a)$ do not change over time. That assumption is often false. In many of the applications that matter, the environment drifts, and what was best yesterday need not be best today. The question is then not merely how to *find* the optimal action, but how to *track* it.
 
-Exercise 3 makes this concrete with a variant of the ten-armed testbed. At the start of each run all true action values are equal (zero). After every time step, each $q_*(a)$ takes an independent random walk:
+Project 3 makes this concrete with a variant of the ten-armed testbed. At the start of each run all true action values are equal (zero). After every time step, each $q_*(a)$ takes an independent random walk:
 
 $$
 q_*(a) \;\leftarrow\; q_*(a) + \mathcal{N}(0,\,0.01).
@@ -49,8 +49,8 @@ Of course $\alpha$ must still be chosen with care. If it is too large, the estim
 
 Average reward over 2,000 runs (sample average vs. $\alpha = 0.1$):
 
-![Average Reward](assets/exercise_3_average_reward.png)
+![Average Reward](assets/project_3_average_reward.png)
 
 Percentage of optimal actions over the same runs:
 
-![Percent Optimal Action](assets/exercise_3_optimal_action_percentage.png)
+![Percent Optimal Action](assets/project_3_optimal_action_percentage.png)

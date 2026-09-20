@@ -1,6 +1,6 @@
 # reinforcement_learning
 
-> Notes and coding exercises while reading *Reinforcement Learning* by Richard Sutton.
+> Lessons, Sutton and Barto exercise responses, and reinforcement-learning projects.
 
 [Get Started](README.md)
 [Documentation](documentation/README.md)

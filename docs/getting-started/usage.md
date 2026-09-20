@@ -1,12 +1,12 @@
 # Usage
 
-There is no console script entry point in `pyproject.toml`. Use the package by importing modules or running playground files as scripts.
+There is no console script entry point in `pyproject.toml`. Use the package by importing modules or running project files as scripts.
 
-## Import the playground modules
+## Import the project modules
 
 ```python
-from reinforcement_learning.playground.exercise001 import Agent, Environment
-from reinforcement_learning.playground.exercise002 import (
+from reinforcement_learning.projects.project001 import Agent, Environment
+from reinforcement_learning.projects.project002 import (
     Agent as BanditAgent,
     Environment as BanditEnvironment,
     run_experiment,
@@ -15,12 +15,12 @@ from reinforcement_learning.playground.exercise002 import (
 )
 ```
 
-## Exercise 1 — 2-action environment
+## Project 1 — 2-action environment
 
 Train a random policy for 1000 episodes and print learned action values:
 
 ```python
-from reinforcement_learning.playground.exercise001 import Agent, Environment
+from reinforcement_learning.projects.project001 import Agent, Environment
 
 env = Environment()
 agent = Agent()
@@ -41,15 +41,15 @@ print(agent.q)
 Or run the module directly from the repository root:
 
 ```bash
-python -m reinforcement_learning.playground.exercise001
+python -m reinforcement_learning.projects.project001
 ```
 
-## Exercise 2 — 10-armed bandit
+## Project 2 — 10-armed bandit
 
-Run repeated trials for several ε values and write comparison plots under `docs/exercises/assets/`:
+Run repeated trials for several ε values and write comparison plots under `docs/projects/assets/`:
 
 ```python
-from reinforcement_learning.playground.exercise002 import plot_results, run_experiments
+from reinforcement_learning.projects.project002 import plot_results, run_experiments
 
 results = run_experiments(
     epsilons=[0.0, 0.01, 0.1],
@@ -62,20 +62,20 @@ plot_results(results)
 Or run the module directly:
 
 ```bash
-python -m reinforcement_learning.playground.exercise002
+python -m reinforcement_learning.projects.project002
 ```
 
 `plot_results` saves:
 
-- `docs/exercises/assets/exercise_2_average_reward.png`
-- `docs/exercises/assets/exercise_2_optimal_action_percentage.png`
+- `docs/projects/assets/project_2_average_reward.png`
+- `docs/projects/assets/project_2_optimal_action_percentage.png`
 
 Run from the repository root so those relative paths resolve correctly.
 
 ## Single ε experiment
 
 ```python
-from reinforcement_learning.playground.exercise002 import run_experiment
+from reinforcement_learning.projects.project002 import run_experiment
 
 average_rewards, percent_optimal = run_experiment(
     trials=2000,
@@ -89,4 +89,4 @@ average_rewards, percent_optimal = run_experiment(
 ## Next steps
 
 - Module-level API details: [Package Reference](../documentation/package.md)
-- Exercise 2 plots in the docs: [Exercise Plots](../exercises/exercise.md)
+- Project 2 plots in the docs: [Project Plots](../projects/project2.md)

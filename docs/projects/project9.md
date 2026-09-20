@@ -1,4 +1,4 @@
-# Exercise 9 — Understanding Gradient-Bandit Baselines
+# Project 9 — Understanding Gradient-Bandit Baselines
 
 ## Concept: A Reference for Reinforcement
 
@@ -47,9 +47,9 @@ $$
 
 The expected update favors actions better than the **current policy's expected reward**, regardless of the baseline. The baseline changes the **variance of sampled updates**, not their mean at the same policy. Different noise produces different preferences and subsequent action choices, so finite learning trajectories can nevertheless differ substantially. A badly chosen baseline can increase variance rather than reduce it.
 
-## Exercise Summary
+## Project Summary
 
-`reinforcement_learning/playground/exercise009.py` compares five baselines on a stationary 10-armed Gaussian bandit:
+`reinforcement_learning/projects/project009.py` compares five baselines on a stationary 10-armed Gaussian bandit:
 
 - **2,000 independent trials**, each lasting **1,000 steps**; seed `42`.
 - Ten true action values $q_*(a)\sim\mathcal{N}(0,1)$ sampled at each trial's start and then held fixed.
@@ -71,7 +71,7 @@ Both adaptive baselines start at zero in the main comparison. The running averag
 
 ## Learning Results
 
-![Reward and optimal-action selection for five baselines, before and after adding four to all rewards](assets/exercise_9_learning.png)
+![Reward and optimal-action selection for five baselines, before and after adding four to all rewards](assets/project_9_learning.png)
 
 **Results.** The horizontal axes show steps. The top panels show mean observed reward; the bottom panels show the percentage choosing the true optimal action. Left panels use means centered at zero; right panels use the same tasks shifted by +4. Gray is fixed 0, purple is fixed −4, orange is fixed +4, blue is the running average, and green is the EMA. Dashed black lines mark the mean true value of the optimal arm. All agents initially choose optimally about 10% of the time.
 
@@ -89,11 +89,11 @@ Over the final 200 steps, optimal-action selection was:
 | Running average | 84.18% | 83.30% |
 | Exponential average | 85.77% | 79.62% |
 
-These are finite-run results at one preference step size, not universal rankings or convergence guarantees. The [summary CSV](assets/exercise_9_summary.csv) also records average rewards, final-window rewards, and run settings.
+These are finite-run results at one preference step size, not universal rankings or convergence guarantees. The [summary CSV](assets/project_9_summary.csv) also records average rewards, final-window rewards, and run settings.
 
 ## Why Can an Adaptive Baseline Change in a Stationary Bandit?
 
-![Fixed and adaptive baseline values over time in zero-centered and shifted reward conditions](assets/exercise_9_baselines.png)
+![Fixed and adaptive baseline values over time in zero-centered and shifted reward conditions](assets/project_9_baselines.png)
 
 **Results.** The horizontal axes are steps and the vertical axis is the baseline used **before** the preference update, averaged over trials. Colors match the learning figure. The fixed baselines remain horizontal. The blue and green baselines rise because the improving policy increasingly selects better actions. Stationarity means each action's reward distribution is fixed; it does not mean the reward distribution under a changing policy is fixed.
 
@@ -120,7 +120,7 @@ b_{\mathrm{minvar}}
 {\sum_a\pi(a)\|e_a-\pi\|^2}.
 $$
 
-![Exact total gradient variance as a function of baseline for uniform and concentrated policies](assets/exercise_9_gradient_variance.png)
+![Exact total gradient variance as a function of baseline for uniform and concentrated policies](assets/project_9_gradient_variance.png)
 
 **Results.** The horizontal axes vary the fixed baseline; the vertical axes show total gradient variance, before multiplying by $\alpha^2$. Blue curves show that variance grows as the baseline moves away from its minimum. Black dashed lines mark the policy's expected reward; green dotted lines mark the minimum-variance baseline. For the uniform policy on the left, every score vector has the same squared norm, so both reference lines coincide at zero. On the right, the best arm has probability 0.91 and each other arm has probability 0.01: expected reward is 0.9, but the minimum-variance baseline is approximately **−0.058**.
 
@@ -161,16 +161,16 @@ Baseline choice and preference step size interact: update noise is multiplied by
 ## Run and Explore
 
 ```bash
-python -m reinforcement_learning.playground.exercise009
+python -m reinforcement_learning.projects.project009
 ```
 
 For a smaller headless run:
 
 ```bash
-MPLBACKEND=Agg python -m reinforcement_learning.playground.exercise009 --trials 200
+MPLBACKEND=Agg python -m reinforcement_learning.projects.project009 --trials 200
 ```
 
-Options are `--trials`, `--steps`, `--alpha`, `--beta`, `--seed`, and `--output-dir`. Defaults reproduce the three figures and summary CSV in `docs/exercises/assets/`. Reusing the default output directory overwrites those generated assets.
+Options are `--trials`, `--steps`, `--alpha`, `--beta`, `--seed`, and `--output-dir`. Defaults reproduce the three figures and summary CSV in `docs/projects/assets/`. Reusing the default output directory overwrites those generated assets.
 
 Try reducing `--beta` to see a slower, smoother EMA, or increasing `--alpha` to expose sensitivity to noisy advantages. Change `initial_value` in `CONFIGURATIONS` to test intermediate fixed baselines. These are experiments to investigate, not guaranteed improvements.
 
