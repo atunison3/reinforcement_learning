@@ -31,3 +31,11 @@ agent.update(state, action, reward, next_state)
 - [Projects](projects.md)
 - [Documentation overview](documentation/README.md)
 - [Getting started](getting-started/installation.md)
+
+## Support this project
+
+If these lessons and projects are useful to you, consider supporting their development.
+
+<a href="https://www.buymeacoffee.com/atunison" target="_blank" rel="noopener noreferrer">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60" style="max-width: 100%; height: auto;">
+</a>

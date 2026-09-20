@@ -39,3 +39,4 @@
 
 - About
   - [About the Author](about/author.md)
+  - <a href="https://www.buymeacoffee.com/atunison" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a>
