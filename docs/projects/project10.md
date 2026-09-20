@@ -14,7 +14,104 @@ From the repository root, with the package and its dependencies installed:
 python -m reinforcement_learning.projects.project010 --episodes 10000 --seed 42
 ```
 
-The script trains an epsilon-greedy agent with `epsilon=0.1`. `--episodes` counts dealt rounds; the output reports retained training rounds and discarded dealer-blackjack rounds separately. Mean training return excludes discarded deals rather than treating them as zero-return samples. It also prints invalid-action rounds, observed states, shuffle count, and the final running count. It does not save a model or plots. These statistics exclude dealer-natural outcomes and include exploration and artificial penalties; they are **not an estimate of casino profitability**.
+The script trains an **epsilon-greedy agent with epsilon 0.1**, retaining untried action values initialized to 10. `--episodes` counts dealt rounds; the output reports retained training rounds and discarded dealer-blackjack rounds separately. Mean training return excludes discarded deals rather than treating them as zero-return samples. It also prints invalid-action rounds, observed states, shuffle count, and the final running count. It prints learned action tables and saves them as Markdown and CSV. The CSV can restore learned Q-values and visit counts for further training; it does not store a complete environment/RNG checkpoint or plots. These statistics exclude dealer-natural outcomes and include exploration and artificial penalties; they are **not an estimate of casino profitability**.
+
+## Epsilon-greedy policy
+
+On each decision, the agent explores with probability $\epsilon=0.1$ by choosing uniformly among **all four actions**, including invalid ones. Otherwise it chooses a largest Q-value, breaking ties randomly. There is no action masking. With a unique greedy action, its total selection probability is $0.9+0.1/4=0.925$; each other action has probability $0.025$.
+
+Every untried state–action value still starts at $Q(s,a)=10$, with a visit count of zero. Changing the action-selection policy does not reset existing learned values or change their initialization.
+
+Ten is optimistic because the largest possible valid round payoff with four hands is $+8$ (four doubled wins). After an action is tried, its observed return replaces the initial 10; untried actions stay at 10 and become more attractive on subsequent visits. Later observations use the existing every-visit Monte Carlo sample average. The initialization is not an invented reward or an extra observation in that average.
+
+Epsilon exploration continues after all actions have been sampled, including occasional known-bad or invalid choices. Optimistic values additionally encourage trying unvisited actions during the greedy branch. Neither mechanism guarantees that rarely encountered states are well covered or that this aggregated model learns optimal play.
+
+**For a fresh run with all untried values at 10, omit `--load-strategy`.** Resuming preserves already learned means and visit counts; only untried actions receive the new initial value of 10. Existing saved reports describe the policy used when they were generated and are not retroactively relabeled.
+
+## Continue training from a saved CSV
+
+Load the existing results and run **10,000 additional dealt rounds**:
+
+```bash
+python -m reinforcement_learning.projects.project010 --load-strategy docs/projects/assets/project_10_strategy.csv --episodes 10000 --seed 43
+```
+
+The loader restores both the Q estimates and their action-visit counts. New returns continue the same sample averages instead of treating old estimates as single observations. Blank Q cells with zero visits become optimistic values of 10, including when loading CSVs produced by the previous zero-initialized policy. Completely unvisited states remain unlearned and use 10 when first encountered. Sampled values—including genuine zero estimates—are not reset. Recommendation letters are regenerated from Q-values, not used as training data.
+
+By default, the updated reports replace the files in `docs/projects/assets/`, including the CSV you loaded. The input is fully read and validated before training or export begins. To preserve the old results, choose a different output directory:
+
+```bash
+python -m reinforcement_learning.projects.project010 --load-strategy docs/projects/assets/project_10_strategy.csv --episodes 10000 --seed 43 --output-dir results/blackjack-resumed
+```
+
+**What resumes:** Q-values and cumulative state–action visit counts. **What starts fresh:** the shoe, running count, random-generator state, and run statistics. The seed controls this new run; using a different seed avoids restarting the same initial random sequence. The resumed CLI policy is epsilon-greedy with epsilon 0.1; epsilon is not loaded from the CSV. The CSV contains no lifetime episode total, so `--episodes` always specifies additional rounds, not a target cumulative total.
+
+The loader rejects malformed headers/rows, duplicate states, impossible flag combinations, negative or inconsistent visit counts, missing sampled Q-values, and non-finite estimates. It replaces an agent's Q/count tables only after validation succeeds. Missing states in a partial CSV remain unlearned.
+
+For Python use:
+
+```python
+from pathlib import Path
+from reinforcement_learning.projects.project010 import (
+    BlackjackEnvironment,
+    MonteCarloAgent,
+    load_strategy,
+    run_episode,
+)
+
+agent = MonteCarloAgent(seed=43)
+load_strategy(agent, Path("docs/projects/assets/project_10_strategy.csv"))
+environment = BlackjackEnvironment(seed=43)
+for _ in range(1000):
+    run_episode(environment, agent)
+```
+
+## Runtime reporting
+
+The program uses a monotonic high-resolution timer and reports:
+
+- **Each completed block of 10,000 dealt episodes:** its measured elapsed seconds, printed immediately during training. Discarded dealer-blackjack deals count toward these blocks just as they count toward `--episodes`.
+- **A final partial block:** its actual episode count and duration when the run is not a multiple of 10,000. A run shorter than 10,000 reports only a partial block.
+- **Training time and normalized average per 1,000 episodes:** printed in the final table summary and saved in the Markdown report. The normalized average is `training_seconds × 1000 / episodes`, an extrapolation when fewer than 1,000 were run. Training time includes progress reporting but excludes loading and final report generation.
+- **Total program time:** printed after the tables and files are written. It measures from entry into `main()` through argument processing, loading, environment setup, training, and report output; Python startup/import time and the final timing print itself are outside this measurement. This final duration is console-only.
+
+On a resumed run, return statistics and timings describe only the new run, while exported Q-values and visits incorporate the loaded history. Timings depend on hardware and output destination; they are not fixed performance guarantees.
+
+## Results: actions to take
+
+After the final dealt round, the script prints **six hand-by-dealer-upcard tables**: one for each combination of count (`<1` or `>0`) and double/split eligibility (no/no, yes/no, yes/yes). Columns are dealer 2–10 and ace; rows are the matching hand categories. Choose the table matching the current state's flags, not just its hand total. Impossible hand/flag combinations are omitted; possible but unvisited states remain visible.
+
+Default output files:
+
+- [Latest learned action tables](assets/project_10_strategy.md) — readable tables with run settings and training statistics.
+- [Detailed strategy CSV](assets/project_10_strategy.csv) — one row per state, including action-value estimates and visit counts for all four actions.
+
+Both files are written under `docs/projects/assets/` and **overwritten on each run**. To keep a separate experiment:
+
+```bash
+python -m reinforcement_learning.projects.project010 --episodes 100000 --seed 42 --output-dir results/blackjack-run-1
+```
+
+### Reading a cell
+
+| Symbol | Meaning |
+| --- | --- |
+| `H` | Hit |
+| `S` | Stand |
+| `D` | Double |
+| `P` | Split |
+| `?` | No learned recommendation: either the state is unseen, or an untried action's initial 10 ties or exceeds the best sampled value |
+| `*` | Some of the four actions have not been sampled; the displayed best choice is provisional |
+| `/` | Multiple actions tie for the highest Q estimate, for example `H/S` |
+| `!` | That greedy choice violates the state's game rules; it is a diagnostic, not advice to take an invalid action |
+
+For example, `D*` would mean double has the highest learned estimate despite incomplete coverage. With this game's returns bounded above by 8 and untried values at 10, a partially sampled state normally shows `?` until all four actions have been tried. Optimistic guesses are not presented as learned recommendations.
+
+The report uses **greedy Q values without epsilon exploration**. It does not sample the policy or arbitrarily choose between ties. It also does not replace the learned result with a hand-coded basic strategy or silently mask bad choices. Optimistic initial values are not treated as evidence for an action. Training uses epsilon-greedy selection with epsilon 0.1 and optimistic initialization, and continues to allow all four actions. The reported table shows the greedy exploitation choices, not the random exploration actions.
+
+The CSV records `count`, `can_double`, `can_split`, `hand`, `dealer_upcard`, `recommendation`, `state_visits`, and a `q_...`/`visits_...` pair for hit, stand, double, and split. Untried Q estimates are blank, with zero visits. Visits count state–action occurrences, not necessarily distinct episodes.
+
+An unmarked action is **not** proof of convergence or optimal play: it only means every action was sampled at least once. Sparse samples, exploratory penalties in whole-round returns, and the coarse state representation can produce poor recommendations. Consult the CSV before interpreting differences between count buckets. Fresh runs in which every deal is discarded still produce tables with every cell marked `?`; resumed runs with no learning updates retain their previously loaded results.
 
 ## State representation
 
@@ -173,7 +270,7 @@ from reinforcement_learning.projects.project010 import (
 )
 
 environment = BlackjackEnvironment(seed=42)
-agent = MonteCarloAgent(epsilon=0.1, seed=43)
+agent = MonteCarloAgent(seed=43)
 
 for _ in range(10000):
     episode = run_episode(environment, agent)  # Updates only playable rounds.
@@ -185,7 +282,7 @@ for _ in range(10000):
 
 `run_episode` returns an empty tuple for a discarded dealer-natural deal, without calling either `choose_action` or `learn`. It produces no transition, fake action, or zero-reward sample. Other episodes still update the learner, including −100 penalties for actual invalid choices.
 
-On playable rounds, the agent samples all four actions, including those inconsistent with the state flags, so penalties become learning experience. With nonzero epsilon, it will continue making some invalid choices even after their negative values have been learned.
+On playable rounds, all four actions remain eligible, including those inconsistent with the state flags. Untried actions are favored by their optimistic values, so invalid decisions still become learning experience. After their negative returns are learned, the greedy branch favors higher-valued alternatives. The epsilon branch still samples uniformly, so some invalid-action penalties continue even after those actions have low estimates.
 
 ## Card counting and the shoe
 
@@ -220,4 +317,4 @@ These choices preserve the requested simple state rather than implying that a ta
 python -m unittest discover -s tests -p "test_project010.py" -v
 ```
 
-Tests cover category precedence, multi-step hits, legal and invalid actions, dealer peeks with ace and ten upcards, discarded mutual naturals, absence of actions/updates on discarded deals, training-statistic filtering, split/re-split handling, double-after-split payoffs, combined return credited to splitting, finite-shoe continuity, hidden-card counting, reshuffles, and reproducible training.
+Tests cover category precedence, multi-step hits, legal and invalid actions, dealer peeks with ace and ten upcards, discarded mutual naturals, absence of actions/updates on discarded deals, training-statistic filtering, split/re-split handling, double-after-split payoffs, combined return credited to splitting, finite-shoe continuity, hidden-card counting, reshuffles, and reproducible training. Report tests verify greedy choices, ties, incomplete/unseen states, count and eligibility separation, CSV estimates and counts, CLI output, and that reporting leaves the agent unchanged. Resume tests verify Q/count round trips, continued averaging, invalid-file rejection without partial updates, and loading before overwriting the same CSV. Controlled-clock tests cover full/partial 10,000-episode blocks, runs below the reporting interval, discarded deals, the normalized per-1,000 average, and total runtime.

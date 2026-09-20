@@ -4,23 +4,30 @@ Run: python -m reinforcement_learning.projects.project010 --episodes 10000
 Read: docs/projects/project10.md
 
 All four actions are always offered. Invalid game decisions end the whole
-round with -100. Valid rounds pay the sum of all hand outcomes at termination,
+round with -100. Training prints and saves learned action tables at the end.
+Valid rounds pay the sum of all hand outcomes at termination,
 so undiscounted Monte Carlo returns credit a split with both descendants.
 Dealer blackjack is revealed before any player action; these rounds are
 terminated and discarded from learning, without an action penalty.
+The policy is epsilon-greedy (epsilon=0.1) with untried Q values initialized to 10.
 """
 
 import argparse
+import csv
+import math
 import random
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from itertools import accumulate
+from pathlib import Path
+from time import perf_counter
 
 from reinforcement_learning.blackjack import hand_value
 
 INVALID_REWARD = -100.0
+INITIAL_ACTION_VALUE = 10.0
 DECK = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10) * 4
 
 
@@ -361,24 +368,28 @@ class Experience:
 
 
 class MonteCarloAgent:
-    """Every-visit action-value averages with epsilon-greedy, unmasked actions.
+    """Every-visit Monte Carlo with epsilon-greedy, unmasked actions.
 
-    Returns use gamma=1 and stop at the end of the whole round, not at a
-    split-hand boundary. This simple state aggregation is not a full MDP state.
+    Untried Q values are 10 with zero visits. With probability epsilon, choose
+    uniformly among all four actions; otherwise choose a maximal Q value,
+    breaking ties randomly. The first sample replaces the initialization,
+    and later samples use their usual average.
+    Returns use gamma=1 over the whole round, including all split hands.
+    This simple state aggregation is not a full MDP state.
     """
 
-    def __init__(self, epsilon: float = 0.1, seed: int | None = None) -> None:
+    def __init__(self, seed: int | None = None, *, epsilon: float = 0.1) -> None:
         if not 0.0 <= epsilon <= 1.0:
             raise ValueError("epsilon must be between zero and one")
         self.epsilon = epsilon
-        # Reproducible exploration, not cryptography.
+        # Reproducible exploration and tie-breaking, not cryptography.
         self._rng = random.Random(seed)  # nosec B311
         self.q: dict[BlackjackState, list[float]] = {}
         self.visits: dict[BlackjackState, list[int]] = {}
 
     def choose_action(self, state: BlackjackState) -> Action:
-        values = self.q.get(state, [0.0] * len(Action))
-        if self._rng.random() < self.epsilon:
+        values = self.q.get(state, [INITIAL_ACTION_VALUE] * len(Action))
+        if self.epsilon > 0 and self._rng.random() < self.epsilon:
             return self._rng.choice(tuple(Action))
         best = max(values)
         return self._rng.choice([action for action in Action if values[action] == best])
@@ -387,7 +398,7 @@ class MonteCarloAgent:
         total_return = 0.0
         for experience in reversed(episode):
             total_return += experience.reward
-            values = self.q.setdefault(experience.state, [0.0] * len(Action))
+            values = self.q.setdefault(experience.state, [INITIAL_ACTION_VALUE] * len(Action))
             visits = self.visits.setdefault(experience.state, [0] * len(Action))
             action = experience.action
             visits[action] += 1
@@ -413,34 +424,274 @@ def run_episode(environment: BlackjackEnvironment, agent: MonteCarloAgent) -> tu
     return tuple(episode)
 
 
+ACTION_CODES = {Action.HIT: "H", Action.STAND: "S", Action.DOUBLE: "D", Action.SPLIT: "P"}
+DEALER_UPCARDS = (*range(2, 11), 1)
+TABLE_FLAGS = ((False, False), (True, False), (True, True))
+STRATEGY_COLUMNS = ["count", "can_double", "can_split", "hand", "dealer_upcard", "recommendation", "state_visits"] + [
+    field for action in Action for field in (f"q_{action.name.lower()}", f"visits_{action.name.lower()}")
+]
+
+
+def table_hands(can_double: bool, can_split: bool) -> tuple[HandCategory, ...]:
+    """Structurally possible categories for a table's double/split flags.
+
+    Pairs can have can_split=False when the hand limit is reached, but still
+    have two cards and can double. Natural blackjack is the two-card exception
+    to doubling; an ordinary eight is always multi-card in this representation.
+    """
+    if can_split:
+        return tuple(hand for hand in HandCategory if hand in PAIRS) if can_double else ()
+    if can_double:
+        return tuple(hand for hand in HandCategory if hand not in (HandCategory.BLACKJACK, HandCategory.EIGHT))
+    two_card_only = (*PAIRS, HandCategory.SIX_TWO, HandCategory.FIVE_THREE)
+    return tuple(hand for hand in HandCategory if hand not in two_card_only)
+
+
+def strategy_cell(agent: MonteCarloAgent, state: BlackjackState) -> str:
+    """Report greedy Q choices without exploration, random tie breaks, or masks.
+
+    '?' means no data, or a greedy choice still depends on an untried action's
+    optimistic initialization. '*' marks incomplete four-action coverage. '!' marks a
+    learned greedy choice that would violate the rules. Ties list all choices.
+    """
+    values = agent.q.get(state)
+    visits = agent.visits.get(state)
+    if values is None or visits is None or not any(visits):
+        return "?"
+    best = max(values)
+    actions = [action for action in Action if values[action] == best]
+    if any(visits[action] == 0 for action in actions):
+        return "?"
+    codes: list[str] = []
+    for action in actions:
+        invalid = (
+            (state.hand is HandCategory.BLACKJACK and action is not Action.STAND)
+            or (action is Action.DOUBLE and not state.can_double)
+            or (action is Action.SPLIT and not state.can_split)
+        )
+        codes.append(ACTION_CODES[action] + ("!" if invalid else ""))
+    return "/".join(codes) + ("*" if not all(visits) else "")
+
+
+def format_strategy_table(agent: MonteCarloAgent, *, summary: Sequence[str] = ()) -> str:
+    """Render hand-by-upcard tables for both count buckets and all flag groups."""
+    lines = ["# Project 10 — Learned Action Tables", ""]
+    if summary:
+        lines.extend(f"- {line}" for line in summary)
+        lines.append("")
+    lines.extend(
+        (
+            f"Training policy: epsilon-greedy (epsilon={agent.epsilon:g}); untried Q = {INITIAL_ACTION_VALUE:g}.",
+            "Tables show greedy learned choices, without random exploration; these are not proven optimal play.",
+            "",
+            "`H` = hit; `S` = stand; `D` = double; `P` = split; `A` = dealer ace.",
+            f"`?` = unlearned: unseen state or an untried action ties/leads using its initial {INITIAL_ACTION_VALUE:g}.",
+            "`*` = not all four actions have been sampled; `/` = tied best choices; `!` = choice violates game rules.",
+            "An unmarked cell is not a confidence guarantee; inspect the CSV visit counts and Q estimates.",
+            "Impossible hand/flag combinations are omitted. All four actions remain unmasked during learning.",
+            "",
+        )
+    )
+    for count in CountBucket:
+        for can_double, can_split in TABLE_FLAGS:
+            lines.append(
+                f"## Count {count.value}; double {'yes' if can_double else 'no'}; "
+                f"split {'yes' if can_split else 'no'}"
+            )
+            lines.extend(
+                (
+                    "",
+                    "| Hand / dealer upcard | "
+                    + " | ".join("A" if card == 1 else str(card) for card in DEALER_UPCARDS)
+                    + " |",
+                    "| --- | " + " | ".join("---" for _ in DEALER_UPCARDS) + " |",
+                )
+            )
+            for hand in table_hands(can_double, can_split):
+                cells = [
+                    strategy_cell(agent, BlackjackState(hand, can_double, can_split, card, count))
+                    for card in DEALER_UPCARDS
+                ]
+                lines.append(f"| {hand.value} | " + " | ".join(cells) + " |")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def save_strategy_tables(agent: MonteCarloAgent, directory: Path, *, summary: Sequence[str] = ()) -> tuple[Path, Path]:
+    """Save readable Markdown and per-state Q/count details, including unseen states."""
+    directory.mkdir(parents=True, exist_ok=True)
+    markdown_path = directory / "project_10_strategy.md"
+    csv_path = directory / "project_10_strategy.csv"
+    markdown_path.write_text(format_strategy_table(agent, summary=summary), encoding="utf-8")
+    with csv_path.open("w", newline="", encoding="utf-8") as output:
+        writer = csv.writer(output, lineterminator="\n")
+        writer.writerow(STRATEGY_COLUMNS)
+        for count in CountBucket:
+            for can_double, can_split in TABLE_FLAGS:
+                for hand in table_hands(can_double, can_split):
+                    for card in DEALER_UPCARDS:
+                        state = BlackjackState(hand, can_double, can_split, card, count)
+                        values = agent.q.get(state, [INITIAL_ACTION_VALUE] * len(Action))
+                        visits = agent.visits.get(state, [0] * len(Action))
+                        writer.writerow(
+                            [
+                                count.value,
+                                can_double,
+                                can_split,
+                                hand.value,
+                                card,
+                                strategy_cell(agent, state),
+                                sum(visits),
+                            ]
+                            + [
+                                field
+                                for action in Action
+                                for field in (values[action] if visits[action] else "", visits[action])
+                            ]
+                        )
+    return markdown_path, csv_path
+
+
+def load_strategy(agent: MonteCarloAgent, path: Path) -> None:
+    """Restore Q means and visit counts from a strategy CSV, replacing prior tables.
+
+    Validate the entire file before mutating the agent. Recommendations are
+    derived display data and are ignored. All-zero rows stay unlearned; blank
+    untried Q cells restore their optimistic initial 10, including old CSVs.
+    Sampled values and visit counts are preserved. The shoe, RNG, and epsilon
+    are not stored in this format and are not restored by loading it.
+    """
+    q: dict[BlackjackState, list[float]] = {}
+    visits: dict[BlackjackState, list[int]] = {}
+    seen: set[BlackjackState] = set()
+    with path.open(newline="", encoding="utf-8-sig") as source:
+        reader = csv.reader(source, strict=True)
+        header = next(reader, None)
+        if header is None or len(header) != len(STRATEGY_COLUMNS) or set(header) != set(STRATEGY_COLUMNS):
+            raise ValueError(f"{path}: expected strategy CSV columns: {', '.join(STRATEGY_COLUMNS)}")
+        for fields in reader:
+            try:
+                if len(fields) != len(header):
+                    raise ValueError("wrong number of columns")
+                row = {key: value.strip() for key, value in zip(header, fields, strict=True)}
+                if any(row[key] not in ("True", "False") for key in ("can_double", "can_split")):
+                    raise ValueError("can_double and can_split must be True or False")
+                state = BlackjackState(
+                    HandCategory(row["hand"]),
+                    row["can_double"] == "True",
+                    row["can_split"] == "True",
+                    int(row["dealer_upcard"]),
+                    CountBucket(row["count"]),
+                )
+                if state.dealer_upcard not in DEALER_UPCARDS or state.hand not in table_hands(
+                    state.can_double, state.can_split
+                ):
+                    raise ValueError("invalid state or impossible hand/flag combination")
+                if state in seen:
+                    raise ValueError("duplicate state")
+                seen.add(state)
+                values: list[float] = []
+                counts: list[int] = []
+                for action in Action:
+                    name = action.name.lower()
+                    count = int(row[f"visits_{name}"])
+                    text = row[f"q_{name}"]
+                    if count < 0:
+                        raise ValueError("visit counts must be nonnegative integers")
+                    if (count == 0 and text != "") or (count > 0 and text == ""):
+                        raise ValueError("Q must be blank exactly when its action has zero visits")
+                    value = float(text) if text else INITIAL_ACTION_VALUE
+                    if not math.isfinite(value):
+                        raise ValueError("Q estimates must be finite")
+                    values.append(value)
+                    counts.append(count)
+                if int(row["state_visits"]) != sum(counts):
+                    raise ValueError("state_visits must equal the sum of action visits")
+                if any(counts):
+                    q[state] = values
+                    visits[state] = counts
+            except ValueError as exc:
+                raise ValueError(f"{path}: row {reader.line_num}: {exc}") from exc
+    if not seen:
+        raise ValueError(f"{path}: strategy CSV contains no state rows")
+    agent.q = q
+    agent.visits = visits
+
+
 def main() -> None:
+    program_started = perf_counter()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--episodes", type=int, default=10000)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--load-strategy", type=Path, help="Resume Q-values and visit counts from a saved project_10_strategy.csv"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(__file__).resolve().parents[2] / "docs" / "projects" / "assets",
+        help="Directory for the learned strategy Markdown and CSV (overwritten each run)",
+    )
     args = parser.parse_args()
     if args.episodes < 1:
         parser.error("--episodes must be positive")
-    environment = BlackjackEnvironment(seed=args.seed)
     agent = MonteCarloAgent(seed=args.seed)
+    loaded_summary: list[str] = []
+    if args.load_strategy is not None:
+        try:
+            load_strategy(agent, args.load_strategy)
+        except (OSError, ValueError, csv.Error) as exc:
+            parser.error(f"Cannot load strategy: {exc}")
+        loaded_visits = sum(sum(counts) for counts in agent.visits.values())
+        loaded_summary.append(
+            f"Loaded strategy: {args.load_strategy}; states: {len(agent.q)}; action visits: {loaded_visits}"
+        )
+        print(loaded_summary[0], flush=True)
+    environment = BlackjackEnvironment(seed=args.seed)
     total = 0.0
     invalid = 0
     discarded = 0
-    for _ in range(args.episodes):
+    training_started = block_started = perf_counter()
+    for dealt in range(1, args.episodes + 1):
         episode = run_episode(environment, agent)
         if not episode:
             discarded += 1
-            continue
-        reward = sum(experience.reward for experience in episode)
-        total += reward
-        invalid += reward == INVALID_REWARD
+        else:
+            reward = sum(experience.reward for experience in episode)
+            total += reward
+            invalid += reward == INVALID_REWARD
+        if dealt % 10000 == 0:
+            elapsed = perf_counter() - block_started
+            print(f"Episodes {dealt - 9999:,}-{dealt:,} (10,000 dealt): {elapsed:.3f} s", flush=True)
+            block_started = perf_counter()
+    training_finished = perf_counter()
+    training_seconds = training_finished - training_started
+    remainder = args.episodes % 10000
+    if remainder:
+        print(
+            f"Episodes {args.episodes - remainder + 1:,}-{args.episodes:,} "
+            f"({remainder:,} dealt, partial block): {training_finished - block_started:.3f} s",
+            flush=True,
+        )
     training_rounds = args.episodes - discarded
-    print(f"Dealt rounds: {args.episodes}; training rounds: {training_rounds}; epsilon: {agent.epsilon:g}")
-    print(f"Discarded dealer-blackjack rounds: {discarded}")
     mean_return = f"{total / training_rounds:.3f}" if training_rounds else "n/a (no training rounds)"
-    print(f"Mean training return (including penalties, excluding discarded rounds): {mean_return}")
-    print(f"Invalid-action rounds: {invalid}; observed states: {len(agent.q)}")
-    print(f"Shoe shuffles: {environment.shuffle_count}; running count: {environment.running_count}")
-    print("Exploratory training statistics are not an estimate of casino profitability.")
+    summary = [
+        *loaded_summary,
+        f"Dealt rounds: {args.episodes}; training rounds: {training_rounds}",
+        f"Policy: epsilon-greedy; epsilon: {agent.epsilon:g}; initial action value: {INITIAL_ACTION_VALUE:g}",
+        f"Training time this run: {training_seconds:.3f} s",
+        f"Average time per 1,000 dealt episodes (normalized): {training_seconds * 1000 / args.episodes:.3f} s",
+        f"Seed: {args.seed}; decks: {environment.decks}; max hands: {environment.max_hands}",
+        f"Discarded dealer-blackjack rounds: {discarded}",
+        f"Mean training return (including penalties, excluding discarded rounds): {mean_return}",
+        f"Invalid-action rounds: {invalid}; observed states: {len(agent.q)}",
+        f"Shoe shuffles: {environment.shuffle_count}; running count: {environment.running_count}",
+        "Exploratory training statistics are not an estimate of casino profitability.",
+    ]
+    print(format_strategy_table(agent, summary=summary), flush=True)
+    markdown_path, csv_path = save_strategy_tables(agent, args.output_dir, summary=summary)
+    print(f"Saved {markdown_path}\nSaved {csv_path}", flush=True)
+    print(f"Total program time (including load, training, and reports): {perf_counter() - program_started:.3f} s")
 
 
 if __name__ == "__main__":

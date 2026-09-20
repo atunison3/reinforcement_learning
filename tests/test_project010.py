@@ -1,8 +1,11 @@
 """Finite-shoe blackjack rules, observable counts, and whole-round credit."""
 
+import csv
 import unittest
 from collections import Counter
 from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from reinforcement_learning.projects.project010 import (
@@ -16,9 +19,14 @@ from reinforcement_learning.projects.project010 import (
     HandCategory,
     MonteCarloAgent,
     categorize_hand,
+    format_strategy_table,
     hi_lo,
+    load_strategy,
     main,
     run_episode,
+    save_strategy_tables,
+    strategy_cell,
+    table_hands,
 )
 
 
@@ -350,10 +358,10 @@ class TestDealerPeek(unittest.TestCase):
             (((), valid_episode), "2.000", 1),
             (((), ()), "n/a (no training rounds)", 2),
         ):
-            with self.subTest(discarded=discarded):
+            with self.subTest(discarded=discarded), TemporaryDirectory() as temp_dir:
                 output = StringIO()
                 with (
-                    patch("sys.argv", ["project010", "--episodes", "2"]),
+                    patch("sys.argv", ["project010", "--episodes", "2", "--output-dir", temp_dir]),
                     patch("sys.stdout", output),
                     patch("reinforcement_learning.projects.project010.run_episode", side_effect=episodes),
                 ):
@@ -447,6 +455,51 @@ class TestShoeAndCount(unittest.TestCase):
 
 
 class TestMonteCarloCredit(unittest.TestCase):
+    def test_optimistic_tens_drive_sampling_in_the_greedy_branch(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent(seed=7, epsilon=0)
+        tried: set[Action] = set()
+        for _ in Action:
+            action = agent.choose_action(state)
+            self.assertNotIn(action, tried)
+            agent.learn((Experience(state, action, 1),))
+            tried.add(action)
+            for candidate in Action:
+                self.assertEqual(agent.q[state][candidate], 1 if candidate in tried else 10)
+                self.assertEqual(agent.visits[state][candidate], int(candidate in tried))
+        self.assertEqual(tried, set(Action))  # Invalid actions are still not masked.
+
+    def test_epsilon_boundary_uses_greedy_branch_and_random_tie_breaking(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent(seed=7)
+        self.assertEqual(agent.epsilon, 0.1)
+        for action, reward in zip(Action, (-2, -1, 2, -100), strict=True):
+            agent.learn((Experience(state, action, reward),))
+        with patch("reinforcement_learning.projects.project010.random.Random.random", return_value=0.1):
+            self.assertEqual({agent.choose_action(state) for _ in range(100)}, {Action.DOUBLE})
+            agent.q[state] = [2, -1, 2, -100]
+            self.assertEqual({agent.choose_action(state) for _ in range(100)}, {Action.HIT, Action.DOUBLE})
+
+    def test_exploration_includes_known_bad_actions_despite_state_flags(self) -> None:
+        state = BlackjackState(HandCategory.BLACKJACK, False, False, 6, CountBucket.POSITIVE)
+        for epsilon, draw in ((0.1, 0.099), (1.0, 0.999)):
+            with self.subTest(epsilon=epsilon):
+                agent = MonteCarloAgent(seed=7, epsilon=epsilon)
+                agent.q[state] = [-100, 1.5, -100, -100]
+                with (
+                    patch("reinforcement_learning.projects.project010.random.Random.random", return_value=draw),
+                    patch(
+                        "reinforcement_learning.projects.project010.random.Random.choice", return_value=Action.SPLIT
+                    ) as choose,
+                ):
+                    self.assertEqual(agent.choose_action(state), Action.SPLIT)
+                    choose.assert_called_once_with(tuple(Action))
+
+    def test_invalid_epsilon_is_rejected(self) -> None:
+        for epsilon in (-0.1, 1.1, float("nan")):
+            with self.subTest(epsilon=epsilon), self.assertRaises(ValueError):
+                MonteCarloAgent(epsilon=epsilon)
+
     def test_split_receives_sum_of_both_winning_hands(self) -> None:
         env = BlackjackEnvironment()
         state = require_state(env.reset(shoe=ordered_shoe(8, 8, 10, 7, 10, 10)))
@@ -466,7 +519,7 @@ class TestMonteCarloCredit(unittest.TestCase):
     def test_invalid_actions_are_not_masked_and_penalties_update_values(self) -> None:
         env = BlackjackEnvironment()
         state = require_state(env.reset(shoe=ordered_shoe(1, 10, 10, 7)))
-        agent = MonteCarloAgent(epsilon=0, seed=0)
+        agent = MonteCarloAgent(seed=0, epsilon=0)
         agent.q[state] = [0, 0, 5, 0]
         self.assertEqual(agent.choose_action(state), Action.DOUBLE)
         result = env.step(Action.DOUBLE)
@@ -500,6 +553,353 @@ class TestMonteCarloCredit(unittest.TestCase):
                 self.assertEqual(left_agent.q, right_agent.q)
                 self.assertGreater(left_env.shuffle_count, 1)
                 self.assertGreater(len(left_agent.q), 0)
+
+
+class TestStrategyLoading(unittest.TestCase):
+    def test_round_trip_preserves_means_counts_and_continues_weighted_learning(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        other = BlackjackState(HandCategory.BLACKJACK, False, False, 10, CountBucket.NON_POSITIVE)
+        original = MonteCarloAgent()
+        for reward in (2, -1):
+            original.learn((Experience(state, Action.DOUBLE, reward),))
+        original.learn((Experience(state, Action.STAND, 0),))  # Sampled zero is not untried.
+        original.learn((Experience(other, Action.STAND, 1.5),))
+        with TemporaryDirectory() as temp_dir:
+            _, path = save_strategy_tables(original, Path(temp_dir))
+            restored = MonteCarloAgent(seed=7)
+            restored.learn((Experience(other, Action.HIT, -100),))
+            load_strategy(restored, path)
+        self.assertEqual(restored.q, original.q)
+        self.assertEqual(restored.visits, original.visits)
+        self.assertEqual(restored.epsilon, 0.1)
+        self.assertEqual(restored.q[state][Action.HIT], 10)  # Untried CSV cells regain optimism.
+        self.assertEqual(restored.visits[state][Action.HIT], 0)
+        self.assertEqual(restored.q[state][Action.STAND], 0)  # Keep genuinely sampled zeros.
+        self.assertEqual(restored.visits[state][Action.STAND], 1)
+        self.assertIn(restored.choose_action(state), (Action.HIT, Action.SPLIT))
+        restored.learn((Experience(state, Action.DOUBLE, 2),))
+        self.assertEqual(restored.visits[state][Action.DOUBLE], 3)
+        self.assertAlmostEqual(restored.q[state][Action.DOUBLE], 1)
+
+    def test_all_unseen_rows_restore_an_empty_learner(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            _, path = save_strategy_tables(MonteCarloAgent(), Path(temp_dir))
+            agent = MonteCarloAgent()
+            load_strategy(agent, path)
+            self.assertEqual(agent.q, {})
+            self.assertEqual(agent.visits, {})
+
+    def test_malformed_rows_and_duplicates_are_rejected_without_partial_updates(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        other = BlackjackState(HandCategory.BLACKJACK, False, False, 10, CountBucket.NON_POSITIVE)
+        original = MonteCarloAgent()
+        original.learn((Experience(state, Action.HIT, 1),))
+        original.learn((Experience(other, Action.STAND, 1.5),))
+        with TemporaryDirectory() as temp_dir:
+            _, path = save_strategy_tables(original, Path(temp_dir))
+            with path.open(newline="", encoding="utf-8") as source:
+                rows = [row for row in csv.DictReader(source) if int(row["state_visits"]) > 0]
+            first = next(row for row in rows if row["hand"] == "9")
+            second = next(row for row in rows if row["hand"] == "blackjack")
+            malformed = (
+                {"count": "unknown"},
+                {"hand": "unknown"},
+                {"dealer_upcard": "11"},
+                {"can_double": "yes"},
+                {"can_double": "True"},  # A natural cannot double.
+                {"can_split": "True"},
+                {"visits_stand": "-1"},
+                {"visits_stand": "1.5"},
+                {"q_stand": ""},
+                {"q_stand": "nan"},
+                {"q_stand": "inf"},
+                {"q_hit": "0"},  # Untried cells must be blank.
+                {"state_visits": "2"},
+            )
+            for update in malformed:
+                with self.subTest(update=update):
+                    with path.open("w", newline="", encoding="utf-8") as output:
+                        writer = csv.DictWriter(output, fieldnames=list(first))
+                        writer.writeheader()
+                        writer.writerows((first, second | update))
+                    agent = MonteCarloAgent()
+                    agent.learn((Experience(other, Action.STAND, 3),))
+                    before_q = {key: values.copy() for key, values in agent.q.items()}
+                    before_visits = {key: values.copy() for key, values in agent.visits.items()}
+                    with self.assertRaisesRegex(ValueError, "row 3"):
+                        load_strategy(agent, path)
+                    self.assertEqual(agent.q, before_q)
+                    self.assertEqual(agent.visits, before_visits)
+            with path.open("w", newline="", encoding="utf-8") as output:
+                writer = csv.DictWriter(output, fieldnames=list(first))
+                writer.writeheader()
+                writer.writerows((first, first))
+            with self.assertRaisesRegex(ValueError, "duplicate state"):
+                load_strategy(MonteCarloAgent(), path)
+
+    def test_rejects_missing_file_headers_empty_data_and_wrong_row_width(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "missing.csv"
+            with self.assertRaises(FileNotFoundError):
+                load_strategy(MonteCarloAgent(), path)
+            for text in ("", "hand,q_hit\n9,1\n"):
+                path.write_text(text, encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "expected strategy CSV columns"):
+                    load_strategy(MonteCarloAgent(), path)
+            _, path = save_strategy_tables(MonteCarloAgent(), Path(temp_dir))
+            header = path.read_text(encoding="utf-8").splitlines()[0] + "\n"
+            path.write_text(header, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "no state rows"):
+                load_strategy(MonteCarloAgent(), path)
+            path.write_text(header + "missing,columns\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "wrong number of columns"):
+                load_strategy(MonteCarloAgent(), path)
+
+    def test_cli_resumes_and_can_safely_replace_the_loaded_csv(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        original = MonteCarloAgent()
+        for reward in (2, -1):
+            original.learn((Experience(state, Action.DOUBLE, reward),))
+
+        def train_one(environment: BlackjackEnvironment, agent: MonteCarloAgent) -> tuple[Experience, ...]:
+            self.assertEqual(agent.visits[state][Action.DOUBLE], 2)
+            self.assertAlmostEqual(agent.q[state][Action.DOUBLE], 0.5)
+            episode = (Experience(state, Action.DOUBLE, 2),)
+            agent.learn(episode)
+            return episode
+
+        with TemporaryDirectory() as temp_dir:
+            _, path = save_strategy_tables(original, Path(temp_dir))
+            output = StringIO()
+            with (
+                patch(
+                    "sys.argv",
+                    ["project010", "--episodes", "1", "--load-strategy", str(path), "--output-dir", temp_dir],
+                ),
+                patch("sys.stdout", output),
+                patch("reinforcement_learning.projects.project010.run_episode", side_effect=train_one),
+            ):
+                main()
+            restored = MonteCarloAgent()
+            load_strategy(restored, path)
+            self.assertEqual(restored.visits[state][Action.DOUBLE], 3)
+            self.assertAlmostEqual(restored.q[state][Action.DOUBLE], 1)
+            self.assertIn("states: 1; action visits: 2", output.getvalue())
+            self.assertIn(
+                "Mean training return (including penalties, excluding discarded rounds): 2.000", output.getvalue()
+            )
+
+    def test_cli_load_error_does_not_train_or_create_reports(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            destination = Path(temp_dir) / "output"
+            with (
+                patch(
+                    "sys.argv",
+                    [
+                        "project010",
+                        "--load-strategy",
+                        str(Path(temp_dir) / "missing.csv"),
+                        "--output-dir",
+                        str(destination),
+                    ],
+                ),
+                patch("sys.stderr", new_callable=StringIO) as errors,
+                patch("reinforcement_learning.projects.project010.run_episode") as train,
+                self.assertRaises(SystemExit) as exc,
+            ):
+                main()
+            self.assertEqual(exc.exception.code, 2)
+            self.assertIn("Cannot load strategy", errors.getvalue())
+            train.assert_not_called()
+            self.assertFalse(destination.exists())
+
+
+class TestTrainingTiming(unittest.TestCase):
+    def test_each_ten_thousand_and_partial_block_include_discarded_deals(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            output = StringIO()
+            with (
+                patch("sys.argv", ["project010", "--episodes", "25000", "--output-dir", temp_dir]),
+                patch("sys.stdout", output),
+                patch("reinforcement_learning.projects.project010.run_episode", return_value=()),
+                patch(
+                    "reinforcement_learning.projects.project010.perf_counter",
+                    side_effect=[10, 12, 14, 14.5, 17, 17.5, 18, 22],
+                ),
+            ):
+                main()
+            text = output.getvalue()
+            self.assertIn("Episodes 1-10,000 (10,000 dealt): 2.000 s", text)
+            self.assertIn("Episodes 10,001-20,000 (10,000 dealt): 2.500 s", text)
+            self.assertIn("Episodes 20,001-25,000 (5,000 dealt, partial block): 0.500 s", text)
+            self.assertEqual(text.count("(10,000 dealt):"), 2)
+            self.assertNotIn("(1,000 dealt):", text)
+            self.assertIn("Training time this run: 6.000 s", text)
+            self.assertIn("Average time per 1,000 dealt episodes (normalized): 0.240 s", text)
+            self.assertIn("Total program time (including load, training, and reports): 12.000 s", text)
+            self.assertIn("Discarded dealer-blackjack rounds: 25000", text)
+            self.assertIn("Training time this run: 6.000 s", (Path(temp_dir) / "project_10_strategy.md").read_text())
+
+    def test_exact_ten_thousand_has_no_partial_block(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            output = StringIO()
+            with (
+                patch("sys.argv", ["project010", "--episodes", "10000", "--output-dir", temp_dir]),
+                patch("sys.stdout", output),
+                patch("reinforcement_learning.projects.project010.run_episode", return_value=()),
+                patch("reinforcement_learning.projects.project010.perf_counter", side_effect=[0, 1, 3, 3, 3, 4]),
+            ):
+                main()
+            text = output.getvalue()
+            self.assertEqual(text.count("(10,000 dealt):"), 1)
+            self.assertNotIn("(1,000 dealt):", text)
+            self.assertNotIn("partial block", text)
+            self.assertIn("Average time per 1,000 dealt episodes (normalized): 0.200 s", text)
+
+    def test_runs_below_ten_thousand_report_only_a_partial_block(self) -> None:
+        for episodes, normalized in ((250, "3.000"), (2500, "0.300"), (9999, "0.075")):
+            with self.subTest(episodes=episodes), TemporaryDirectory() as temp_dir:
+                output = StringIO()
+                with (
+                    patch("sys.argv", ["project010", "--episodes", str(episodes), "--output-dir", temp_dir]),
+                    patch("sys.stdout", output),
+                    patch("reinforcement_learning.projects.project010.run_episode", return_value=()),
+                    patch("reinforcement_learning.projects.project010.perf_counter", side_effect=[0, 1, 1.75, 2]),
+                ):
+                    main()
+                text = output.getvalue()
+                self.assertNotIn("(10,000 dealt):", text)
+                self.assertNotIn("(1,000 dealt):", text)
+                self.assertIn(f"Episodes 1-{episodes:,} ({episodes:,} dealt, partial block): 0.750 s", text)
+                self.assertIn(f"Average time per 1,000 dealt episodes (normalized): {normalized} s", text)
+                self.assertIn("Total program time (including load, training, and reports): 2.000 s", text)
+
+
+class TestStrategyTables(unittest.TestCase):
+    def test_unseen_and_untried_greedy_actions_are_not_arbitrary_recommendations(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent()
+        self.assertEqual(strategy_cell(agent, state), "?")
+        agent.learn((Experience(state, Action.HIT, -1),))
+        self.assertEqual(strategy_cell(agent, state), "?")  # Untried optimistic tens win.
+        agent.learn((Experience(state, Action.STAND, 0),))
+        self.assertEqual(strategy_cell(agent, state), "?")  # Untried actions still tie for best.
+
+    def test_sampled_greedy_action_ties_and_incomplete_coverage(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent(seed=0)
+        agent.learn((Experience(state, Action.DOUBLE, 2),))
+        self.assertEqual(strategy_cell(agent, state), "?")
+        agent.learn((Experience(state, Action.HIT, 2),))
+        self.assertEqual(strategy_cell(agent, state), "?")
+        agent.learn((Experience(state, Action.STAND, 1),))
+        agent.learn((Experience(state, Action.SPLIT, -100),))
+        self.assertEqual(strategy_cell(agent, state), "H/D")
+
+    def test_invalid_learned_choices_are_flagged_not_silently_masked(self) -> None:
+        state = BlackjackState(HandCategory.BLACKJACK, False, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent()
+        # Synthetic diagnostic values: reporting should not replace the learned policy.
+        agent.q[state] = [2, 1, 2, 2]
+        agent.visits[state] = [5, 5, 5, 5]
+        self.assertEqual(strategy_cell(agent, state), "H!/D!/P!")
+        pair = BlackjackState(HandCategory.EIGHT_EIGHT, True, True, 6, CountBucket.POSITIVE)
+        agent.q[pair] = [-1, -1, -1, 2]
+        agent.visits[pair] = [5, 5, 5, 5]
+        self.assertEqual(strategy_cell(agent, pair), "P")
+
+    def test_table_groups_preserve_count_flags_and_dealer_columns(self) -> None:
+        agent = MonteCarloAgent()
+        for state, action in (
+            (BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE), Action.DOUBLE),
+            (BlackjackState(HandCategory.NINE, False, False, 6, CountBucket.POSITIVE), Action.HIT),
+            (BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.NON_POSITIVE), Action.STAND),
+        ):
+            for candidate in Action:
+                agent.learn((Experience(state, candidate, 1 if candidate is action else -100),))
+        text = format_strategy_table(agent)
+        self.assertEqual(text.count("## Count"), 6)
+        self.assertIn("| Hand / dealer upcard | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | A |", text)
+        for heading, expected in (
+            ("Count >0; double yes; split no", "D"),
+            ("Count >0; double no; split no", "H"),
+            ("Count <1; double yes; split no", "S"),
+        ):
+            with self.subTest(heading=heading):
+                section = text.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+                row = next(line for line in section.splitlines() if line.startswith("| 9 |"))
+                cells = [cell.strip() for cell in row.strip("|").split("|")]
+                self.assertEqual(cells[5], expected)  # Dealer six, not another upcard.
+                self.assertEqual(cells[10], "?")  # Unvisited dealer ace.
+
+    def test_table_rows_omit_impossible_combinations_but_include_unseen_categories(self) -> None:
+        self.assertEqual(table_hands(False, True), ())
+        self.assertIn(HandCategory.BLACKJACK, table_hands(False, False))
+        self.assertNotIn(HandCategory.BLACKJACK, table_hands(True, False))
+        self.assertIn(HandCategory.EIGHT, table_hands(False, False))
+        self.assertNotIn(HandCategory.EIGHT, table_hands(True, False))
+        self.assertIn(HandCategory.FOUR_FOUR, table_hands(True, True))
+        self.assertIn(HandCategory.FOUR_FOUR, table_hands(True, False))
+        self.assertNotIn(HandCategory.FOUR_FOUR, table_hands(False, False))
+        self.assertEqual(len(table_hands(True, True)), 10)
+        text = format_strategy_table(MonteCarloAgent())
+        self.assertIn("| blackjack | " + " | ".join(["?"] * 10) + " |", text)
+
+    def test_export_contains_visit_counts_q_estimates_and_empty_untried_values(self) -> None:
+        agent = MonteCarloAgent()
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent.learn((Experience(state, Action.DOUBLE, 2),))
+        with TemporaryDirectory() as temp_dir:
+            md_path, csv_path = save_strategy_tables(agent, Path(temp_dir) / "nested", summary=("Seed: 7",))
+            self.assertIn("- Seed: 7", md_path.read_text(encoding="utf-8"))
+            self.assertNotIn(b"\r", csv_path.read_bytes())
+            with csv_path.open(newline="", encoding="utf-8") as source:
+                rows = list(csv.DictReader(source))
+            self.assertEqual(len(rows), 1160)
+            keys = {
+                (row["count"], row["can_double"], row["can_split"], row["hand"], row["dealer_upcard"]) for row in rows
+            }
+            self.assertEqual(len(keys), len(rows))
+            learned = next(row for row in rows if int(row["state_visits"]) > 0)
+            self.assertEqual(learned["recommendation"], "?")  # Untried tens exceed the learned two.
+            self.assertEqual(learned["count"], ">0")
+            self.assertEqual(learned["dealer_upcard"], "6")
+            self.assertEqual(learned["state_visits"], "1")
+            self.assertEqual(learned["visits_double"], "1")
+            self.assertEqual(float(learned["q_double"]), 2)
+            self.assertEqual(learned["q_hit"], "")
+            self.assertEqual(learned["visits_hit"], "0")
+            # A new run overwrites the previous report without stale recommendations.
+            save_strategy_tables(MonteCarloAgent(), md_path.parent)
+            with csv_path.open(newline="", encoding="utf-8") as source:
+                self.assertTrue(all(row["recommendation"] == "?" for row in csv.DictReader(source)))
+
+    def test_reporting_is_deterministic_and_does_not_sample_or_modify_the_agent(self) -> None:
+        state = BlackjackState(HandCategory.NINE, True, False, 6, CountBucket.POSITIVE)
+        agent = MonteCarloAgent(seed=0)
+        agent.learn((Experience(state, Action.HIT, 1),))
+        before_q = {key: values.copy() for key, values in agent.q.items()}
+        before_visits = {key: values.copy() for key, values in agent.visits.items()}
+        with patch.object(agent, "choose_action", side_effect=AssertionError("Do not sample the policy")):
+            first = format_strategy_table(agent)
+            self.assertEqual(first, format_strategy_table(agent))
+        self.assertEqual(agent.q, before_q)
+        self.assertEqual(agent.visits, before_visits)
+
+    def test_cli_prints_tables_and_saves_to_selected_directory(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            output = StringIO()
+            with (
+                patch("sys.argv", ["project010", "--episodes", "20", "--seed", "7", "--output-dir", temp_dir]),
+                patch("sys.stdout", output),
+            ):
+                main()
+            self.assertIn("# Project 10 — Learned Action Tables", output.getvalue())
+            self.assertIn("Policy: epsilon-greedy; epsilon: 0.1; initial action value: 10", output.getvalue())
+            self.assertIn("## Count >0; double yes; split yes", output.getvalue())
+            report = Path(temp_dir) / "project_10_strategy.md"
+            self.assertIn(report.read_text(encoding="utf-8"), output.getvalue())
+            self.assertTrue((Path(temp_dir) / "project_10_strategy.csv").is_file())
 
 
 if __name__ == "__main__":
