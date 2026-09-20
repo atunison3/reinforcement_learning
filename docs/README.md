@@ -1,50 +1,41 @@
-# Reinforcement Learning Playground
+# Reinforcement Learning
 
-A Python package and notebook-free playground for working through reinforcement learning ideas while reading *Reinforcement Learning* by Phil Winder.
+A Python package for studying reinforcement learning through concept lessons, responses to Sutton and Barto's *Reinforcement Learning: An Introduction*, and independent projects.
 
-## What is reinforcement_learning?
+## Repository areas
 
-This repository records study notes, small bandit environments, and agent implementations. The installable package lives under `reinforcement_learning/` and currently focuses on multi-armed bandit playgrounds used to build intuition for rewards, action values, exploration, and exploitation.
+- **Lessons** — focused explanations of reinforcement-learning concepts and supporting code.
+- **Exercises** — reserved for responses to actual Sutton and Barto exercises; currently empty.
+- **Projects** — personal experiments and systems, including bandits and [blackjack card counting](projects/project10.md).
+- **Notes** — chapter-level study notes.
 
-## Why use it?
+The installable package lives under `reinforcement_learning/`; the Docsify site lives under `docs/`.
 
-Use this project when you want to:
-
-- Experiment with simple RL environments in plain Python.
-- Compare greedy and ε-greedy action selection on a 10-armed Gaussian bandit.
-- Keep study notes, plots, and code in one place.
-- Run the same formatting, lint, type-check, security, and unit-test gates locally and in CI.
-
-## Features
-
-- **Playground Exercise 1** — 2-action cliff/safe environment with a uniformly random policy and incremental action-value updates.
-- **Playground Exercise 2** — *k*-armed Gaussian bandit with ε-greedy agents, repeated trials, and saved performance plots.
-- **Packaging** — setuptools project (`pyproject.toml`) installable with pip.
-- **Quality gates** — black, ruff, bandit, mypy, and `unittest` via pre-commit and GitHub Actions.
-- **Docsify site** — this documentation set under `docs/`.
-
-## Quick Example
+## Quick example
 
 ```python
-from reinforcement_learning.playground.exercise001 import Agent, Environment
+from reinforcement_learning.projects.project001 import Agent, Environment
 
 env = Environment()
 agent = Agent()
-
 state = env.reset()
 action = agent.choose_action(state)
 next_state, reward, terminated = env.step(action)
 agent.update(state, action, reward, next_state)
-
-print(agent.q)
 ```
 
-## Documentation
+## Explore
 
-For installation, usage, module reference, and contributor workflow, see the
-[full documentation](documentation/README.md).
+- [Lessons](lessons.md)
+- [Exercises](exercises/README.md)
+- [Projects](projects.md)
+- [Documentation overview](documentation/README.md)
+- [Getting started](getting-started/installation.md)
 
-## Contributing
+## Support this project
 
-Developers who want to extend the package should start with the
-[contributor guide](contributing/README.md).
+If these lessons and projects are useful to you, consider supporting their development.
+
+<a href="https://www.buymeacoffee.com/atunison" target="_blank" rel="noopener noreferrer">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60" style="max-width: 100%; height: auto;">
+</a>

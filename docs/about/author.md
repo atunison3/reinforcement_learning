@@ -8,3 +8,9 @@ This repository documents his ongoing study and implementation of reinforcement 
 
 - [LinkedIn](https://www.linkedin.com/in/andrew-tunison/)
 - [GitHub](https://www.github.com/atunison3)
+
+## Support my work
+
+<a href="https://www.buymeacoffee.com/atunison" target="_blank" rel="noopener noreferrer">
+  <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="217" height="60" style="max-width: 100%; height: auto;">
+</a>

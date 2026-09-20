@@ -7,7 +7,9 @@ description: Writing exercise lectures and summaries in markdown files.
 
 ## Purpose
 
-Write concise instructional summaries for reinforcement learning exercises.
+Write concise instructional summaries for actual Sutton and Barto textbook exercise responses in `reinforcement_learning/exercises/`.
+
+The existing personal experiments are projects, not textbook exercise responses: their sources are `reinforcement_learning/projects/project{number:0>3}.py`, summaries are `docs/projects/project{n}.md`, and assets are in `docs/projects/assets/`. When documenting a project, use project terminology and these paths instead; retain genuine textbook citations such as Exercise 2.10.
 
 The skill is given an exercise number, reads the corresponding Python exercise file, determines the reinforcement learning concept being practiced, and writes or updates the exercise's Markdown documentation.
 
@@ -48,13 +50,13 @@ If an exercise number contains additional notation, such as a decimal exercise n
 Read:
 
 ```text
-/reinforcement_learning/playground/exercise{number:0>3}.py
+/reinforcement_learning/exercises/exercise{number:0>3}.py
 ```
 
 For example:
 
 ```text
-/reinforcement_learning/playground/exercise004.py
+/reinforcement_learning/exercises/exercise004.py
 ```
 
 The exercise source is the primary source of truth.
