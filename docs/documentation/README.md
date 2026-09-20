@@ -21,7 +21,7 @@ reinforcement_learning/
 └── projects/      # independent projects and experiments
 ```
 
-The nine existing experiments live under `reinforcement_learning.projects`, named `project001.py` through `project009.py`. Their numbering identifies personal projects, not textbook exercises. `reinforcement_learning.exercises` is reserved for actual book responses; lesson material has its own area.
+Personal experiments live under `reinforcement_learning.projects`, currently named `project001.py` through `project010.py`. Their numbering identifies personal projects, not textbook exercises. `reinforcement_learning.exercises` is reserved for actual book responses; lesson material has its own area.
 
 ## Related project areas
 

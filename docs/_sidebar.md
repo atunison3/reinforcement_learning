@@ -6,6 +6,8 @@
 
 - Lessons
   - [Lesson overview](lessons.md)
+  - [3.1 — Agent–Environment Interface](lessons/lesson0301.md)
+  - [3.2 — Goals and Rewards](lessons/lesson0302.md)
 
 - Exercises
   - [Exercise overview](exercises/README.md)
@@ -21,6 +23,7 @@
   - [Project 7](projects/project7.md)
   - [Project 8](projects/project8.md)
   - [Project 9](projects/project9.md)
+  - [Project 10 — Card Counting](projects/project10.md)
 
 - Documentation
   - [Overview](documentation/README.md)

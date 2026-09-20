@@ -6,7 +6,7 @@ A Python package for studying reinforcement learning through concept lessons, re
 
 - **Lessons** — focused explanations of reinforcement-learning concepts and supporting code.
 - **Exercises** — reserved for responses to actual Sutton and Barto exercises; currently empty.
-- **Projects** — the nine existing personal experiments, plus future systems and experiments I build.
+- **Projects** — personal experiments and systems, including bandits and [blackjack card counting](projects/project10.md).
 - **Notes** — chapter-level study notes.
 
 The installable package lives under `reinforcement_learning/`; the Docsify site lives under `docs/`.
