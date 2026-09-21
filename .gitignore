@@ -2,6 +2,9 @@ pr-description.md
 feedback.md
 *.csv
 
+# Completed-run caches; keep the small Project 11 aggregate report/figures instead.
+docs/projects/assets/project_11/study/checkpoints/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

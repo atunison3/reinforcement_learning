@@ -14,6 +14,7 @@ Personal reinforcement-learning experiments and things I build live in `reinforc
 | [8](projects/project8.md) | Blackjack parameter study |
 | [9](projects/project9.md) | Gradient-bandit reward baselines |
 | [10](projects/project10.md) | Full-round blackjack, splitting, and card counting |
+| [11](projects/project11.md) | Episodic policy parameter study on a cylindrical hex-world game |
 
 Run a project from the repository root, for example:
 
