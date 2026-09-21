@@ -49,6 +49,7 @@ This is a **single-run-per-setting study**: no uncertainty bands are drawn. Epis
 | State-local UCB | 0.0078125 | 65.8928 | 98.34% | 1.42% | 0.25% | 14.43 |
 
 Among completed settings, **Epsilon-greedy at 0.03125** has the highest observed mean (74.0403).
+
 - Epsilon-greedy spans -793.4792 (parameter 1) to 74.0403 (0.03125) across completed settings.
 - Gradient bandit → episodic REINFORCE spans -144.9404 (parameter 0.0078125) to 57.9276 (1) across completed settings.
 - Greedy, optimistic initialization spans -322.6173 (parameter 4) to 40.2494 (0.015625) across completed settings.
