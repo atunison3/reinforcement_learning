@@ -32,12 +32,14 @@ from reinforcement_learning.projects import project002
 | `reinforcement_learning.projects.project001` | 2-action environment, random agent, sample-average Q updates |
 | `reinforcement_learning.projects.project002` | *k*-armed Gaussian bandit, ε-greedy agent, multi-trial runner, plotting |
 | `reinforcement_learning.projects.project010` | Finite-shoe blackjack, exact hard/soft totals, split-round context, Hi-Lo counting, masked Double Q-learning |
+| `reinforcement_learning.projects.project011` | Fixed cylindrical hex game, movement/combat/city defenses, Q-learning demo, and episodic policy parameter study |
 
 See:
 
 - [Project 1](project001.md)
 - [Project 2](project002.md)
 - [Project 10 — Card Counting](../projects/project10.md)
+- [Project 11 — Hex-World Travel](../projects/project11.md)
 
 ## Dependencies
 
@@ -53,7 +55,7 @@ These are imported by the project modules and appear in `requirements.txt`:
 - `numpy`
 - `matplotlib`
 
-Install them when running Project 1 or Project 2.
+Install them when running Project 1 or Project 2. Project 11's policy-study charts also require Matplotlib; its standalone game demo uses only the standard library.
 
 ## Tooling defaults
 

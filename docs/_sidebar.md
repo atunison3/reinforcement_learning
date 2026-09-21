@@ -24,6 +24,8 @@
   - [Project 8](projects/project8.md)
   - [Project 9](projects/project9.md)
   - [Project 10 — Card Counting](projects/project10.md)
+  - [Project 11 — Hex-World Travel](projects/project11.md)
+    - [Episodic policy study report](projects/assets/project_11/study/report.md)
 
 - Documentation
   - [Overview](documentation/README.md)
