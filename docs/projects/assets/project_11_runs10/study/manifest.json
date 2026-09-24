@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "episodes": 100000,
+  "runs": 10,
+  "seed": 42,
+  "map_seed": 42,
+  "max_turns": 500,
+  "parameters": [
+    0.0078125,
+    0.015625,
+    0.03125,
+    0.0625,
+    0.125,
+    0.25,
+    0.5,
+    1.0,
+    2.0,
+    4.0
+  ],
+  "block_size": 1000,
+  "reward_scale": 1000.0,
+  "source_hash": "1690685621ebad7354ae598af55ee3c66e57212b68c397214874dde90a612009"
+}
